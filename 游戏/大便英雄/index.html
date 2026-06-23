@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>冲厕英雄 - 整蛊靶场</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <canvas id="game" aria-label="冲厕英雄整蛊靶场游戏画面"></canvas>
+
+      <section class="hud hud--top" aria-label="游戏状态">
+        <div class="brand-chip">
+          <span>Flush Prank</span>
+          <strong>冲厕英雄</strong>
+        </div>
+      </section>
+
+      <aside class="action-panel" aria-label="动作按钮">
+        <header>
+          <span>右侧数字按钮</span>
+          <strong>整蛊招式</strong>
+        </header>
+        <div id="action-list" class="action-list"></div>
+      </aside>
+
+      <section class="overlay overlay--active" id="start-overlay">
+        <div class="modal">
+          <span class="eyebrow">恶搞解压小游戏</span>
+          <h1>冲厕英雄<br />整蛊靶场</h1>
+          <p>
+            点击右侧 1-10 号动作按钮整蛊布偶；部分版本的 12 号按钮会触发终极大招，进行一波长时间输出。
+          </p>
+
+          <label class="name-field">
+            <span>靶子昵称</span>
+            <input id="target-input" maxlength="10" value="倒霉布偶" />
+          </label>
+
+          <div class="controls-grid">
+            <div><kbd>鼠标</kbd><span>点击右侧动作按钮</span></div>
+            <div><kbd>1-9</kbd><span>快速触发招式</span></div>
+            <div><kbd>0</kbd><span>触发 10 号</span></div>
+            <div><kbd>R</kbd><span>重新开始</span></div>
+          </div>
+
+          <button id="start-button" type="button">开始整蛊</button>
+        </div>
+      </section>
+
+      <section class="toast" id="toast" aria-live="polite">准备</section>
+    </main>
+
+    <script src="./src/main.js"></script>
+  </body>
+</html>

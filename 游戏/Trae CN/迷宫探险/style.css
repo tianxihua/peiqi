@@ -1,0 +1,260 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: #0a0a0a;
+    overflow: hidden;
+    cursor: none;
+}
+
+.game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.hud-left, .hud-center, .hud-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.hud-center {
+    align-items: center;
+}
+
+.hud-right {
+    align-items: flex-end;
+}
+.level-display, .timer-display, .level-size, .marker-display, .health-display {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+}
+
+.health-display {
+    color: #ff4444;
+    font-size: 18px;
+}
+.marker-display {
+    color: #ffb6c1;
+    font-size: 14px;
+}
+.marker-display.no-markers {
+    color: #ff4444;
+}
+
+.monster-display {
+    color: #9932CC;
+    font-size: 14px;
+}
+
+.level-display .label, .timer-display .label {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.level-display .value {
+    color: #4ecdc4;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.timer-display .value {
+    color: #ffe66d;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.level-size {
+    color: #4ecdc4;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.controls-hint {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+}
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(10, 10, 30, 0.95);
+    z-index: 200;
+}
+
+.screen.hidden {
+    display: none;
+}
+
+.screen.active {
+    display: flex;
+}
+
+.screen-content {
+    text-align: center;
+    padding: 40px;
+}
+
+.screen-content h1 {
+    color: #4ecdc4;
+    font-size: 56px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 30px rgba(78, 205, 196, 0.6);
+    animation: titlePulse 2s ease-in-out infinite;
+}
+
+.screen-content p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+.controls-info {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px 30px;
+    border-radius: 15px;
+    margin: 25px 0;
+}
+
+.controls-info p {
+    margin: 8px 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+button {
+    background: linear-gradient(135deg, #4ecdc4, #44a08d);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(78, 205, 196, 0.4);
+}
+
+button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 30px rgba(78, 205, 196, 0.6);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+    z-index: 150;
+}
+
+.crosshair::before,
+.crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.crosshair::before {
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    transform: translateY(-50%);
+}
+
+.crosshair::after {
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+}
+
+@keyframes titlePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.upgrade-options {
+    display: flex;
+    gap: 30px;
+    margin-top: 30px;
+    justify-content: center;
+}
+
+.upgrade-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 15px;
+    border: 2px solid rgba(78, 205, 196, 0.5);
+    min-width: 200px;
+    transition: all 0.3s ease;
+}
+
+.upgrade-card:hover {
+    transform: translateY(-5px);
+    border-color: #4ecdc4;
+    box-shadow: 0 10px 30px rgba(78, 205, 196, 0.3);
+}
+
+.upgrade-card h3 {
+    color: #ffe66d;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.upgrade-card p {
+    font-size: 16px;
+    margin: 10px 0;
+}
+
+.upgrade-card button {
+    margin-top: 20px;
+    padding: 12px 30px;
+    font-size: 16px;
+}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D迷宫探险</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="hud">
+            <div class="hud-left">
+                <div class="level-display">
+                    <span class="label">关卡</span>
+                    <span id="levelNum" class="value">1</span>
+                </div>
+                <div class="timer-display">
+                    <span class="label">时间</span>
+                    <span id="timer" class="value">00:00</span>
+                </div>
+                <div class="health-display">
+                    <span id="healthDisplay">❤️❤️❤️❤️❤️❤️</span>
+                </div>
+            </div>
+            <div class="hud-center">
+                <div class="level-size">
+                    <span id="mazeSizeDisplay">迷宫: 12x12</span>
+                </div>
+                <div class="marker-display">
+                    <span id="markerCount">标记: 3/3</span>
+                </div>
+                <div class="monster-display">
+                    <span id="monsterCount">怪物: 3</span>
+                </div>
+            </div>
+            <div class="hud-right">
+                <div class="controls-hint">
+                    <span>WASD移动 | E标记 | 空格攻击 | 鼠标视角</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="crosshair"></div>
+        
+        <div id="startScreen" class="screen active">
+            <div class="screen-content">
+                <h1>🧭 3D迷宫探险</h1>
+                <p>在迷宫中找到出口进入下一关</p>
+                <div class="controls-info">
+                    <p>WASD - 移动</p>
+                    <p>E - 在墙上标记小猪(共3次,跨关卡)</p>
+                    <p>空格 - 攻击怪物</p>
+                    <p>鼠标 - 转动视角</p>
+                    <p>点击画布启用鼠标控制</p>
+                </div>
+                <button id="startBtn">开始探险</button>
+            </div>
+        </div>
+        
+        <div id="levelCompleteScreen" class="screen hidden">
+            <div class="screen-content">
+                <h1>🎉 关卡完成!</h1>
+                <p>用时: <span id="levelTime">00:00</span></p>
+                <button id="continueBtn">继续</button>
+            </div>
+        </div>
+        
+        <div id="upgradeScreen" class="screen hidden">
+            <div class="screen-content">
+                <h1>⚔️ 选择升级</h1>
+                <div class="upgrade-options">
+                    <div class="upgrade-card">
+                        <h3>升级武器</h3>
+                        <p id="upgradeWeaponName">木棒</p>
+                        <p id="upgradeWeaponDesc">攻击范围 +50%</p>
+                        <button id="upgradeWeaponBtn">升级武器</button>
+                    </div>
+                    <div class="upgrade-card">
+                        <h3>随机技能</h3>
+                        <p id="skillName">生命恢复 +2</p>
+                        <button id="getSkillBtn">获得技能</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="victoryScreen" class="screen hidden">
+            <div class="screen-content">
+                <h1>🏆 恭喜通关!</h1>
+                <p>总用时: <span id="totalTime">00:00</span></p>
+                <button id="restartGameBtn">重新开始</button>
+            </div>
+        </div>
+        
+        <div id="gameOverScreen" class="screen hidden">
+            <div class="screen-content">
+                <h1>💀 游戏结束</h1>
+                <button id="restartGameBtn2">重新开始</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>

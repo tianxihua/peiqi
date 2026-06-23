@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>傻蛋佩奇聊天 AI</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #ffd2ad;
+      --card: #fffaf2;
+      --card-soft: #fff4e9;
+      --bubble: #ffdccc;
+      --bubble-user: #fff0e6;
+      --line: #ead8ca;
+      --accent: #d85d2c;
+      --accent-dark: #b94a23;
+      --text: #4a2b21;
+      --muted: #8b6759;
+      --soft-button: #ffe5d7;
+      --shadow: 0 24px 55px rgba(159, 91, 43, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(255, 238, 203, 0.68), rgba(255, 189, 151, 0.5)),
+        var(--bg);
+      padding: 22px;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      color: var(--accent-dark);
+      background: var(--soft-button);
+      font-weight: 800;
+      transition: transform 0.16s ease, filter 0.16s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .workspace {
+      width: min(1720px, 100%);
+      height: calc(100vh - 44px);
+      min-height: 660px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 535px;
+      gap: 28px;
+      transition: grid-template-columns 0.2s ease;
+    }
+
+    .workspace.history-collapsed {
+      grid-template-columns: minmax(0, 1fr) 126px;
+    }
+
+    .workspace.history-collapsed .history-title,
+    .workspace.history-collapsed .count-pill,
+    .workspace.history-collapsed .history-actions,
+    .workspace.history-collapsed .history-card,
+    .workspace.history-collapsed #deleteButton {
+      display: none;
+    }
+
+    .workspace.history-collapsed .history-top {
+      justify-content: center;
+    }
+
+    .workspace.history-collapsed .history-panel {
+      padding-inline: 18px;
+    }
+
+    .chat-panel,
+    .history-panel {
+      background: rgba(255, 250, 242, 0.95);
+      border: 2px solid rgba(234, 216, 202, 0.92);
+      border-radius: 34px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .chat-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 28px;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 8px 28px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.6rem, 2.45vw, 2.35rem);
+      line-height: 1;
+      letter-spacing: 0;
+      font-weight: 900;
+    }
+
+    .status {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(0.92rem, 1.15vw, 1.16rem);
+      font-weight: 700;
+    }
+
+    .pill-button {
+      min-height: 50px;
+      padding: 0 22px;
+      border-radius: 999px;
+      font-size: 1rem;
+      white-space: nowrap;
+    }
+
+    .chat {
+      overflow-y: auto;
+      padding: 28px 8px;
+    }
+
+    .message {
+      display: flex;
+      margin-bottom: 18px;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .bubble {
+      max-width: min(76%, 830px);
+      padding: 18px 22px;
+      border-radius: 22px;
+      color: var(--text);
+      background: var(--bubble);
+      font-size: clamp(0.98rem, 1.28vw, 1.22rem);
+      line-height: 1.62;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+
+    .message.user .bubble {
+      background: var(--bubble-user);
+      border: 2px solid #f4cfbd;
+    }
+
+    .message.thinking .bubble {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .composer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 66px 66px;
+      gap: 14px;
+      align-items: center;
+      padding: 24px 0 0;
+      border-top: 2px solid var(--line);
+    }
+
+    .input-wrap {
+      position: relative;
+      min-width: 0;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 68px;
+      max-height: 150px;
+      border: 2px solid var(--line);
+      border-radius: 24px;
+      padding: 18px 24px;
+      color: var(--text);
+      background: rgba(255, 253, 249, 0.92);
+      outline: none;
+      font-size: clamp(0.96rem, 1.15vw, 1.12rem);
+      font-weight: 700;
+      line-height: 1.45;
+      resize: none;
+      overflow-y: auto;
+    }
+
+    textarea::placeholder {
+      color: #9f9188;
+    }
+
+    textarea:focus {
+      border-color: #e9a385;
+      box-shadow: 0 0 0 5px rgba(216, 93, 44, 0.12);
+    }
+
+    .icon-button {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 1.72rem;
+      line-height: 1;
+    }
+
+    .voice-button {
+      color: #8f8f8f;
+      background: #ffe9dc;
+    }
+
+    .voice-button.listening {
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .mic-icon {
+      width: 13px;
+      height: 22px;
+      border: 2px solid currentColor;
+      border-radius: 999px;
+      position: relative;
+      display: inline-block;
+      transform: translateY(-6px);
+    }
+
+    .mic-icon::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -7px;
+      width: 23px;
+      height: 14px;
+      border: 2px solid currentColor;
+      border-top: 0;
+      border-radius: 0 0 999px 999px;
+      transform: translateX(-50%);
+    }
+
+    .mic-icon::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -17px;
+      width: 18px;
+      height: 12px;
+      border-radius: 999px;
+      background:
+        linear-gradient(currentColor, currentColor) center top / 2px 10px no-repeat,
+        linear-gradient(currentColor, currentColor) center bottom / 18px 2px no-repeat;
+      transform: translateX(-50%);
+    }
+
+    .send-button {
+      color: #fff;
+      background: var(--accent);
+      font-size: 2.05rem;
+      padding-bottom: 4px;
+    }
+
+    .history-panel {
+      padding: 34px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .history-top {
+      display: grid;
+      grid-template-columns: max-content max-content minmax(132px, 1fr) max-content;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .history-title {
+      margin: 0;
+      font-size: 1.18rem;
+      font-weight: 900;
+    }
+
+    .count-pill {
+      min-width: 76px;
+      text-align: center;
+      padding: 12px 15px;
+      border-radius: 999px;
+      color: var(--accent-dark);
+      background: #fff0e6;
+      font-size: 0.95rem;
+      font-weight: 900;
+    }
+
+    .history-actions {
+      display: grid;
+      grid-template-columns: max-content max-content;
+      gap: 14px;
+      justify-content: start;
+      margin-top: 0;
+    }
+
+    .history-card {
+      margin-top: 2px;
+      padding: 19px 22px;
+      border: 2px solid #f0b092;
+      border-radius: 22px;
+      background: #fff0e6;
+      text-align: center;
+    }
+
+    .history-card strong {
+      display: block;
+      margin-bottom: 12px;
+      color: var(--accent-dark);
+      font-size: 1rem;
+    }
+
+    .history-card p {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .shake {
+      animation: shake 0.22s ease-in-out 2;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      35% { transform: translateX(-6px); }
+      70% { transform: translateX(6px); }
+    }
+
+    @media (max-width: 1180px) {
+      body {
+        padding: 14px;
+      }
+
+      .workspace {
+        height: auto;
+        min-height: calc(100vh - 28px);
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .history-panel {
+        min-height: 260px;
+      }
+
+      .history-top {
+        grid-template-columns: max-content max-content max-content max-content;
+      }
+    }
+
+    @media (max-width: 660px) {
+      body {
+        padding: 0;
+      }
+
+      .workspace {
+        min-height: 100vh;
+        gap: 0;
+      }
+
+      .chat-panel,
+      .history-panel {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+      }
+
+      .chat-panel {
+        min-height: 100vh;
+        padding: 16px;
+      }
+
+      .chat-header {
+        padding: 8px 0 18px;
+      }
+
+      .pill-button {
+        min-height: 44px;
+        padding: 0 15px;
+        font-size: 0.92rem;
+      }
+
+      .bubble {
+        max-width: 92%;
+        padding: 14px 16px;
+        border-radius: 18px;
+      }
+
+      .composer {
+        grid-template-columns: 1fr 54px;
+        gap: 10px;
+      }
+
+      textarea {
+        min-height: 56px;
+        border-radius: 19px;
+        padding: 14px 16px;
+      }
+
+      .voice-button {
+        display: none;
+      }
+
+      .icon-button {
+        width: 54px;
+        height: 54px;
+        font-size: 1.55rem;
+      }
+
+      .history-panel {
+        padding: 20px 16px;
+      }
+
+      .history-top,
+      .history-actions {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .history-title {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="workspace" aria-label="傻蛋佩奇聊天 AI">
+    <section class="chat-panel" aria-label="聊天区域">
+      <header class="chat-header">
+        <div>
+          <h1>傻蛋佩奇</h1>
+          <p class="status">本地模式已启动，傻蛋佩奇正在呆萌待命</p>
+        </div>
+        <button class="pill-button" type="button" id="clearButton">清空聊天</button>
+      </header>
+
+      <section class="chat" id="chat" aria-live="polite"></section>
+
+      <form class="composer" id="composer">
+        <div class="input-wrap">
+          <textarea
+            id="messageInput"
+            autocomplete="off"
+            maxlength="180"
+            rows="1"
+            placeholder="跟傻蛋佩奇聊点什么..."
+            aria-label="输入聊天内容"
+          ></textarea>
+        </div>
+        <button class="icon-button voice-button" type="button" id="voiceButton" aria-label="语音输入" title="语音输入">
+          <span class="mic-icon" aria-hidden="true"></span>
+        </button>
+        <button class="icon-button send-button" type="submit" aria-label="发送消息" title="发送消息">↑</button>
+      </form>
+    </section>
+
+    <aside class="history-panel" aria-label="历史对话">
+      <div class="history-top">
+        <h2 class="history-title">历史对话</h2>
+        <span class="count-pill" id="chatCount">1 条</span>
+        <button class="pill-button" type="button" id="deleteButton">删除聊天</button>
+        <button class="pill-button" type="button" id="collapseButton">收起</button>
+      </div>
+
+      <div class="history-actions">
+        <button class="pill-button" type="button" id="newChatButton">新建聊天</button>
+        <button class="pill-button" type="button" id="renameButton">重命名聊天</button>
+      </div>
+
+      <article class="history-card" id="historyCard">
+        <strong>聊天 1</strong>
+        <p>新建对话，等你开始第一句对话。</p>
+      </article>
+    </aside>
+  </main>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const composer = document.getElementById("composer");
+    const messageInput = document.getElementById("messageInput");
+    const voiceButton = document.getElementById("voiceButton");
+    const clearButton = document.getElementById("clearButton");
+    const newChatButton = document.getElementById("newChatButton");
+    const renameButton = document.getElementById("renameButton");
+    const deleteButton = document.getElementById("deleteButton");
+    const collapseButton = document.getElementById("collapseButton");
+    const historyCard = document.getElementById("historyCard");
+    const chatCount = document.getElementById("chatCount");
+    const workspace = document.querySelector(".workspace");
+
+    let chatNumber = 1;
+    let currentTitle = "聊天 1";
+    let recognition = null;
+    let isListening = false;
+
+    const replies = [
+      {
+        keywords: ["你好", "哈喽", "嗨", "hello", "hi"],
+        text: "你好呀，我是傻蛋佩奇，外表呆萌，反应可不慢。"
+      },
+      {
+        keywords: ["名字", "你是谁", "介绍", "身份"],
+        text: "我是傻蛋佩奇，本地陪聊小猪，不联网也能乖乖接话。"
+      },
+      {
+        keywords: ["难过", "伤心", "烦", "累", "不开心"],
+        text: "先别急着难过，我把小椅子搬过来，陪你慢慢说。"
+      },
+      {
+        keywords: ["学习", "作业", "考试", "题", "背书"],
+        text: "我们一小口一小口啃问题，啃完就奖励自己一点开心。"
+      },
+      {
+        keywords: ["游戏", "玩", "开黑", "通关"],
+        text: "游戏我可以陪你精神加油，输赢先放一边，快乐要拿满。"
+      },
+      {
+        keywords: ["可爱", "厉害", "聪明", "棒", "喜欢你"],
+        text: "哎呀，我被夸到脸蛋发热了，但我会假装很淡定。"
+      },
+      {
+        keywords: ["再见", "拜拜", "晚安"],
+        text: "拜拜呀，傻蛋佩奇会在这里乖乖等你下次回来。"
+      }
+    ];
+
+    function withCatchphrase(reply) {
+      return `~哼哼~ ${reply}`;
+    }
+
+    function createReply(message) {
+      const normalized = message.trim().toLowerCase();
+      const matched = replies.find((rule) => {
+        return rule.keywords.some((keyword) => normalized.includes(keyword.toLowerCase()));
+      });
+
+      if (matched) {
+        return matched.text;
+      }
+
+      const fallbackReplies = [
+        "你直接跟我聊天就行，我会正常接话，也会在需要的时候尽量把问题讲清楚。",
+        "这个我听懂一点点啦，再多说一句，我的小脑袋就能转得更稳。",
+        "我先认真点头，再慢慢回答你。虽然呆萌，但我很努力。",
+        "你说的这个挺有意思，我想用简单的话陪你把它捋顺。"
+      ];
+      const index = Math.abs(message.length + message.charCodeAt(0)) % fallbackReplies.length;
+      return fallbackReplies[index];
+    }
+
+    function updateHistoryCard(summary = "新建对话，等你开始第一句对话。") {
+      historyCard.innerHTML = `<strong>${currentTitle}</strong><p>${summary}</p>`;
+      chatCount.textContent = `${chatNumber} 条`;
+    }
+
+    function addMessage(text, type, extraClass = "") {
+      const row = document.createElement("div");
+      row.className = `message ${type} ${extraClass}`.trim();
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+      row.append(bubble);
+
+      chat.append(row);
+      chat.scrollTop = chat.scrollHeight;
+      return row;
+    }
+
+    function addBotMessage(text) {
+      return addMessage(text, "bot");
+    }
+
+    function addUserMessage(text) {
+      return addMessage(text, "user");
+    }
+
+    function showThinking() {
+      return addMessage("傻蛋佩奇正在想...", "bot", "thinking");
+    }
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+
+      if (!message) {
+        messageInput.placeholder = "先说点什么嘛，佩奇在等你...";
+        messageInput.classList.add("shake");
+        setTimeout(() => messageInput.classList.remove("shake"), 520);
+        return;
+      }
+
+      addUserMessage(message);
+      messageInput.value = "";
+      messageInput.focus();
+      updateHistoryCard(message.length > 22 ? `${message.slice(0, 22)}...` : message);
+
+      const thinking = showThinking();
+      setTimeout(() => {
+        thinking.remove();
+        addBotMessage(withCatchphrase(createReply(message)));
+      }, 360);
+    }
+
+    function resetChat() {
+      chat.innerHTML = "";
+      addBotMessage(withCatchphrase("我是傻蛋佩奇，外表呆萌，反应可不慢。"));
+      addBotMessage(withCatchphrase("你直接跟我聊天就行，我会正常接话，也会在需要的时候尽量把问题讲清楚。"));
+      messageInput.value = "";
+      messageInput.placeholder = "跟傻蛋佩奇聊点什么...";
+      updateHistoryCard();
+      messageInput.focus();
+    }
+
+    function startNewChat() {
+      chatNumber += 1;
+      currentTitle = `聊天 ${chatNumber}`;
+      resetChat();
+    }
+
+    function showInputHint(text) {
+      messageInput.placeholder = text;
+      messageInput.classList.add("shake");
+      setTimeout(() => messageInput.classList.remove("shake"), 520);
+    }
+
+    function setupVoiceInput() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        voiceButton.title = "当前浏览器不支持语音输入";
+        return null;
+      }
+
+      const voiceRecognition = new SpeechRecognition();
+      voiceRecognition.lang = "zh-CN";
+      voiceRecognition.interimResults = false;
+      voiceRecognition.continuous = false;
+
+      voiceRecognition.addEventListener("start", () => {
+        isListening = true;
+        voiceButton.classList.add("listening");
+        voiceButton.title = "正在听你说话";
+        messageInput.placeholder = "傻蛋佩奇正在听...";
+      });
+
+      voiceRecognition.addEventListener("result", (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        if (transcript) {
+          messageInput.value = transcript;
+          messageInput.focus();
+        }
+      });
+
+      voiceRecognition.addEventListener("error", () => {
+        showInputHint("语音输入失败，请检查麦克风权限...");
+      });
+
+      voiceRecognition.addEventListener("end", () => {
+        isListening = false;
+        voiceButton.classList.remove("listening");
+        voiceButton.title = "语音输入";
+        messageInput.placeholder = "跟傻蛋佩奇聊点什么...";
+      });
+
+      return voiceRecognition;
+    }
+
+    function toggleVoiceInput() {
+      if (!recognition) {
+        showInputHint("当前浏览器不支持语音输入...");
+        return;
+      }
+
+      if (isListening) {
+        recognition.stop();
+        return;
+      }
+
+      recognition.start();
+    }
+
+    composer.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sendMessage();
+    });
+
+    messageInput.addEventListener("keydown", (event) => {
+      if (event.metaKey && event.key === "Enter") {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    clearButton.addEventListener("click", resetChat);
+    voiceButton.addEventListener("click", toggleVoiceInput);
+    newChatButton.addEventListener("click", startNewChat);
+    renameButton.addEventListener("click", () => {
+      currentTitle = `${currentTitle}（已命名）`;
+      updateHistoryCard("这个聊天已经被傻蛋佩奇认真记住名字。");
+    });
+    deleteButton.addEventListener("click", resetChat);
+    collapseButton.addEventListener("click", () => {
+      const collapsed = workspace.classList.toggle("history-collapsed");
+      collapseButton.textContent = collapsed ? "展开" : "收起";
+    });
+
+    recognition = setupVoiceInput();
+    resetChat();
+  </script>
+</body>
+</html>

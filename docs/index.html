@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>战区突入 FPS 原型</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+
+      <div class="hud">
+        <div class="hud__top">
+          <div class="panel panel--objective">
+            <span class="panel__label">MISSION</span>
+            <strong id="objective-text">肃清训练场，达成 12 次击杀</strong>
+          </div>
+          <div class="panel panel--status">
+            <span class="panel__label">STATUS</span>
+            <div class="status-grid">
+              <span>账号</span>
+              <strong id="account-name">-</strong>
+              <span>阵营</span>
+              <strong id="team-name">-</strong>
+              <span>段位</span>
+              <strong id="rank-count">青铜</strong>
+              <span>徽章</span>
+              <strong id="rank-badge">铜</strong>
+              <span>胜场</span>
+              <strong id="win-count">0</strong>
+              <span>击杀</span>
+              <strong id="kill-count">0</strong>
+              <span>敌军</span>
+              <strong id="wave-count">1</strong>
+              <span>剩余时间</span>
+              <strong id="timer-count">180</strong>
+            </div>
+            <div class="status-note" id="rank-progress">再赢 2 局晋升白银</div>
+          </div>
+        </div>
+
+        <div class="crosshair">
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="hit-indicator" id="hit-indicator"></div>
+        <div class="damage-mask" id="damage-mask"></div>
+        <div class="rank-toast" id="rank-toast">
+          <div class="rank-toast__badge" id="rank-toast-badge">铜</div>
+          <div class="rank-toast__text">
+            <span class="rank-toast__label">RANK UP</span>
+            <strong id="rank-toast-title">晋升青铜</strong>
+          </div>
+        </div>
+
+        <div class="chat-dock">
+          <button class="chat-toggle" id="chat-toggle" type="button">公共频道</button>
+          <section class="chat-panel" id="chat-panel">
+            <div class="chat-panel__header">
+              <strong>公共频道</strong>
+              <span id="chat-status">最近 5 条消息</span>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-compose">
+              <input id="chat-input" type="text" maxlength="60" placeholder="按 Enter 发言" />
+              <button id="chat-send" type="button">发送</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="hud__bottom">
+          <div class="panel panel--prompt" id="prompt-text">点击“进入战场”开始。移动鼠标上下左右观察，W A S D 移动，左键射击，右键瞄准。</div>
+          <div class="panel panel--ammo">
+            <span class="panel__label">WEAPON</span>
+            <div class="weapon-grid">
+              <strong id="ammo-count">30 / 150</strong>
+              <span id="weapon-state">MX-12 突击步枪</span>
+            </div>
+          </div>
+          <div class="panel panel--health">
+            <span class="panel__label">VITAL</span>
+            <div class="health-row">
+              <div class="health-bar">
+                <div class="health-bar__fill" id="health-fill"></div>
+              </div>
+              <strong id="health-count">100%</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay overlay--active" id="login-overlay">
+        <div class="briefing briefing--small">
+          <span class="briefing__eyebrow">LOCAL ACCOUNT / SIGN IN</span>
+          <h2>账号登录</h2>
+          <p>每次打开或刷新都会先登录。本地账号数据只保存在当前浏览器里，不会联网。</p>
+          <div class="account-form">
+            <label class="account-form__field">
+              <span>名称</span>
+              <input id="login-name" type="text" maxlength="20" autocomplete="username" placeholder="输入你的名称" />
+            </label>
+            <label class="account-form__field">
+              <span>密码</span>
+              <input id="login-password" type="password" maxlength="32" autocomplete="current-password" placeholder="输入你的密码" />
+            </label>
+          </div>
+          <div class="account-actions">
+            <button id="login-button" class="start-button">登录</button>
+            <button id="register-button" class="start-button start-button--secondary">注册新账号</button>
+          </div>
+          <p class="account-message" id="login-message">输入名称和密码后登录，或先注册一个新账号。</p>
+        </div>
+      </div>
+
+      <div class="overlay overlay--menu" id="start-overlay">
+        <div class="menu-screen">
+          <div class="menu-home" id="menu-home">
+            <div class="menu-screen__header">
+              <span class="menu-screen__eyebrow">DELTA MENU</span>
+              <h1>战区突入</h1>
+              <p>登录成功后先进入主菜单。点击排位赛开始正式对局，点击练习场进入不计段位的训练模式。</p>
+            </div>
+            <div class="menu-grid">
+              <button class="menu-card" id="skin-button" type="button">
+                <span class="menu-card__icon menu-card__icon--skin">✦</span>
+                <strong>皮肤选择</strong>
+              </button>
+              <button class="menu-card menu-card--featured" id="ranked-button" type="button">
+                <span class="menu-card__icon menu-card__icon--ranked">♛</span>
+                <strong>排位赛</strong>
+              </button>
+              <button class="menu-card" id="practice-button" type="button">
+                <span class="menu-card__icon menu-card__icon--practice">✹</span>
+                <strong>练习场</strong>
+              </button>
+            </div>
+          </div>
+
+          <div class="skin-screen is-hidden" id="skin-screen">
+            <div class="skin-screen__top">
+              <button class="skin-back" id="skin-back-button" type="button">返回</button>
+              <div>
+                <span class="menu-screen__eyebrow">WEAPON SKINS</span>
+                <h2>皮肤选择</h2>
+                <p id="skin-subtitle">点击不同的枪皮肤后，游戏中的对应武器会同步切换成这套外观风格。</p>
+              </div>
+            </div>
+            <div class="skin-grid" id="skin-grid"></div>
+            <div class="skin-tabs">
+              <button class="skin-tab is-active" id="skin-tab-rifle" type="button">突击步枪</button>
+              <button class="skin-tab" id="skin-tab-pistol" type="button">小手枪</button>
+            </div>
+          </div>
+          <div class="menu-screen__footer">
+            <div class="menu-note" id="menu-note">当前账号已进入主菜单。点击“排位赛”开始正式匹配。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="summary-overlay">
+        <div class="briefing briefing--summary">
+          <span class="briefing__eyebrow">BATTLE SUMMARY</span>
+          <h2>本局结算</h2>
+          <p id="summary-text">本局统计正在汇总中。</p>
+          <div class="summary-columns">
+            <div class="summary-team-card">
+              <div class="summary-team-card__title" id="summary-friendly-title">我方</div>
+              <div class="summary-board">
+                <div class="summary-board__header">
+                  <span>成员</span>
+                  <span>参团率</span>
+                  <span>承伤率</span>
+                  <span>伤害率</span>
+                  <span>人头率</span>
+                </div>
+                <div class="summary-board__body" id="summary-friendly-body"></div>
+              </div>
+            </div>
+            <div class="summary-team-card">
+              <div class="summary-team-card__title" id="summary-enemy-title">敌方</div>
+              <div class="summary-board">
+                <div class="summary-board__header">
+                  <span>成员</span>
+                  <span>参团率</span>
+                  <span>承伤率</span>
+                  <span>伤害率</span>
+                  <span>人头率</span>
+                </div>
+                <div class="summary-board__body" id="summary-enemy-body"></div>
+              </div>
+            </div>
+          </div>
+          <div class="result-actions">
+            <button id="summary-continue-button" class="start-button" type="button">继续</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="result-overlay">
+        <div class="briefing briefing--small">
+          <span class="briefing__eyebrow">AFTER ACTION REPORT</span>
+          <h2 id="result-title">任务完成</h2>
+          <p id="result-text"></p>
+          <div class="result-actions">
+            <button id="restart-button" class="start-button">重新部署</button>
+            <button id="exit-squad-button" class="start-button start-button--secondary" type="button">退出队伍</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./src/main.js"></script>
+  </body>
+</html>

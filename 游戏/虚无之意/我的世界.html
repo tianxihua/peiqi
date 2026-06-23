@@ -1,0 +1,3612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>荒野探索战斗原型</title>
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #87ceeb; font-family: Arial, "Microsoft YaHei", sans-serif; }
+    #game { position: fixed; inset: 0; }
+    #menu, #dead, #craft {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.45); z-index: 10;
+    }
+    #dead, #craft { display: none; }
+    .panel {
+      background: rgba(20, 24, 34, 0.9);
+      color: white; border-radius: 18px; padding: 22px 26px; width: min(520px, 88vw);
+      box-shadow: 0 10px 40px rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    #craft .panel {
+      max-height: min(78vh, 760px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #craftList {
+      overflow-y: auto;
+      padding-right: 6px;
+      margin-right: -6px;
+    }
+    #craftList::-webkit-scrollbar {
+      width: 10px;
+    }
+    #craftList::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.22);
+      border-radius: 999px;
+    }
+    .craft-section {
+      margin-top: 14px;
+    }
+    .craft-section:first-child {
+      margin-top: 0;
+    }
+    .craft-title {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.72);
+      margin: 4px 0 6px 2px;
+    }
+    h1, h2, h3 { margin: 0 0 10px 0; }
+    p { margin: 8px 0; line-height: 1.5; }
+    button {
+      cursor: pointer; border: 0; border-radius: 12px; padding: 12px 18px;
+      background: #46a758; color: white; font-size: 16px; margin-top: 12px;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:disabled {
+      cursor: not-allowed;
+      background: #5f6670;
+      color: rgba(255,255,255,.72);
+      filter: none;
+      opacity: 0.78;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .ghost { background: #3f7ad6; }
+    #hud {
+      position: fixed; inset: 0; pointer-events: none; color: white; z-index: 5;
+      text-shadow: 0 2px 4px rgba(0,0,0,.55);
+    }
+    #crosshair {
+      position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin-left: -9px; margin-top: -9px;
+    }
+    #crosshair::before, #crosshair::after {
+      content: ""; position: absolute; background: rgba(255,255,255,.95);
+    }
+    #crosshair::before { left: 8px; top: 1px; width: 2px; height: 16px; }
+    #crosshair::after { left: 1px; top: 8px; width: 16px; height: 2px; }
+    #topbar {
+      position: absolute; left: 14px; top: 12px; display: flex; flex-direction: column; gap: 8px;
+      background: rgba(0,0,0,.26); padding: 12px 14px; border-radius: 14px;
+      max-width: 420px;
+    }
+    #hotbar {
+      position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+      display: flex; gap: 6px; background: rgba(0,0,0,.30); padding: 10px; border-radius: 14px;
+      max-width: min(94vw, 960px); overflow-x: auto; pointer-events: auto;
+    }
+    .slot {
+      width: 62px; height: 62px; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.25);
+      border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-size: 11px; line-height: 1.15; position: relative; flex: 0 0 auto; cursor: pointer;
+    }
+    .slot.active { border-color: #ffd34d; transform: translateY(-4px); }
+    .slot .count { position: absolute; right: 7px; bottom: 5px; font-weight: 700; font-size: 14px; }
+    .slot .key { position: absolute; left: 6px; top: 4px; font-size: 11px; opacity: .85; }
+    #message {
+      position: absolute; left: 50%; top: 16%; transform: translateX(-50%);
+      background: rgba(0,0,0,.35); padding: 10px 14px; border-radius: 12px; font-size: 18px;
+      display: none;
+    }
+    #healthBar, #timeBar {
+      width: 220px; height: 16px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    #healthFill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff5c5c, #ff8c4a); }
+    #timeFill { height: 100%; width: 50%; background: linear-gradient(90deg, #f7d66c, #7fd7ff); }
+    .craft-item {
+      display: flex; justify-content: space-between; align-items: center; padding: 10px 12px;
+      border-radius: 12px; background: rgba(255,255,255,.08); margin-top: 10px;
+    }
+    .small { font-size: 13px; opacity: .9; }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+
+  <div id="menu">
+    <div class="panel">
+      <h1>荒野探索战斗原型</h1>
+      <p>这版不再是挖矿生存，而是探索动作玩法原型。</p>
+      <p>你会在荒野中移动、遭遇怪物、切换武器，并使用带武侠味道的主动技能。</p>
+      <p><b>操作：</b>WASD 移动，空格跳跃，鼠标视角，左键轻击，Q 切换武器，1/2/3 切换技能，E 施放技能，R 重开。</p>
+      <div class="row">
+        <button id="startWarriorBtn">战士开局</button>
+        <button class="ghost" id="startArcherBtn">射手开局</button>
+      </div>
+      <p class="small">如果浏览器第一次没有锁定鼠标，再点一下游戏画面即可。</p>
+    </div>
+  </div>
+
+  <div id="dead">
+    <div class="panel">
+      <h2>你倒下了</h2>
+      <p>按下方按钮重新开始。</p>
+      <button id="restartBtn">重新开始</button>
+    </div>
+  </div>
+
+  <div id="craft">
+    <div class="panel">
+      <h2>简易合成</h2>
+      <div id="craftList">
+      <div class="craft-section">
+        <div class="craft-title">建材</div>
+      <div class="craft-item">
+        <div>
+          <div><b>木板 x4</b></div>
+          <div class="small">消耗：木头 x1</div>
+        </div>
+        <button data-craft="planks">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>火把 x4</b></div>
+          <div class="small">消耗：木板 x1 + 煤炭 x1</div>
+        </div>
+        <button data-craft="torch">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>石砖 x2</b></div>
+          <div class="small">消耗：石头 x2</div>
+        </div>
+        <button data-craft="stone_bricks">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>木门 x1</b></div>
+          <div class="small">消耗：木板 x3 + 木头 x1</div>
+        </div>
+        <button data-craft="wood_door">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>木窗 x1</b></div>
+          <div class="small">消耗：木板 x2 + 木头 x1</div>
+        </div>
+        <button data-craft="wood_window">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>床 x1</b></div>
+          <div class="small">消耗：羊毛 x3 + 木板 x3</div>
+        </div>
+        <button data-craft="bed">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>木头屋 x1</b></div>
+          <div class="small">消耗：木板 x50</div>
+        </div>
+        <button data-craft="wood_house">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>石头屋 x1</b></div>
+          <div class="small">消耗：石头 x50</div>
+        </div>
+        <button data-craft="stone_house">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>黑曜石屋 x1</b></div>
+          <div class="small">消耗：黑曜石 x50</div>
+        </div>
+        <button data-craft="obsidian_house">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>金屋 x1</b></div>
+          <div class="small">消耗：金矿 x50</div>
+        </div>
+        <button data-craft="gold_house">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>钻石屋 x1</b></div>
+          <div class="small">消耗：钻石矿 x50</div>
+        </div>
+        <button data-craft="diamond_house">制作</button>
+      </div>
+      </div>
+      <div class="craft-section">
+        <div class="craft-title">工具</div>
+      <div class="craft-item">
+        <div>
+          <div><b>木镐 x1</b></div>
+          <div class="small">消耗：木板 x3 + 木头 x2</div>
+        </div>
+        <button data-craft="wood_pickaxe">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>石镐 x1</b></div>
+          <div class="small">消耗：石头 x3 + 木板 x2</div>
+        </div>
+        <button data-craft="stone_pickaxe">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>铁镐 x1</b></div>
+          <div class="small">消耗：铁矿 x3 + 木板 x2</div>
+        </div>
+        <button data-craft="iron_pickaxe">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>金镐 x1</b></div>
+          <div class="small">消耗：金矿 x3 + 木板 x2</div>
+        </div>
+        <button data-craft="gold_pickaxe">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>钻石镐 x1</b></div>
+          <div class="small">消耗：钻石矿 x3 + 木头 x2</div>
+        </div>
+        <button data-craft="diamond_pickaxe">制作</button>
+      </div>
+      </div>
+      <div class="craft-section">
+        <div class="craft-title">武器</div>
+      <div class="craft-item">
+        <div>
+          <div><b>木剑 x1</b></div>
+          <div class="small">消耗：木头 x2</div>
+        </div>
+        <button data-craft="wood_sword">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>钻石剑 x1</b></div>
+          <div class="small">消耗：钻石矿 x2</div>
+        </div>
+        <button data-craft="diamond_sword">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>木弓 x1</b></div>
+          <div class="small">消耗：木头 x3</div>
+        </div>
+        <button data-craft="wood_bow">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>石弓 x1</b></div>
+          <div class="small">消耗：石头 x3 + 木头 x2</div>
+        </div>
+        <button data-craft="stone_bow">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>金弓 x1</b></div>
+          <div class="small">消耗：金矿 x3 + 木头 x2</div>
+        </div>
+        <button data-craft="gold_bow">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>黑曜石弓 x1</b></div>
+          <div class="small">消耗：黑曜石 x3 + 木头 x2</div>
+        </div>
+        <button data-craft="obsidian_bow">制作</button>
+      </div>
+      <div class="craft-item">
+        <div>
+          <div><b>钻石弓 x1</b></div>
+          <div class="small">消耗：钻石矿 x3 + 木头 x2</div>
+        </div>
+        <button data-craft="diamond_bow">制作</button>
+      </div>
+      </div>
+      </div>
+      <button class="ghost" id="closeCraftBtn">关闭</button>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="topbar">
+      <div><b id="phaseText">白天</b>　<span id="zoneText">出生点安全区</span></div>
+      <div id="timeBar"><div id="timeFill"></div></div>
+      <div>生命值</div>
+      <div id="healthBar"><div id="healthFill"></div></div>
+      <div id="coordText">位置：0, 0, 0</div><div id="oreText">职业：战士｜武器：长枪</div><div id="dropText">技能：太极｜Q切武器｜1/2/3切技能｜E施放</div>
+    </div>
+    <div id="message"></div>
+    <div id="crosshair"></div>
+    <div id="hotbar"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script>
+    const gameEl = document.getElementById('game');
+    const menuEl = document.getElementById('menu');
+    const deadEl = document.getElementById('dead');
+    const craftEl = document.getElementById('craft');
+    const startWarriorBtn = document.getElementById('startWarriorBtn');
+    const startArcherBtn = document.getElementById('startArcherBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const closeCraftBtn = document.getElementById('closeCraftBtn');
+    const hotbarEl = document.getElementById('hotbar');
+    const messageEl = document.getElementById('message');
+    const phaseText = document.getElementById('phaseText');
+    const zoneText = document.getElementById('zoneText');
+    const healthFill = document.getElementById('healthFill');
+    const timeFill = document.getElementById('timeFill');
+    const coordText = document.getElementById('coordText');
+    const oreText = document.getElementById('oreText');
+    const dropText = document.getElementById('dropText');
+
+    let scene, camera, renderer, clock;
+    let dirLight, hemiLight;
+    let worldGroup, monsterGroup, animalGroup, projectileGroup, decoGroup, worldFxGroup, playerGroup;
+    let raycaster = new THREE.Raycaster();
+    let keys = {};
+    let mouseLookActive = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let gameStarted = false;
+    let dead = false;
+
+    const MAP_DEFINITION = {
+      name: '燕云式最终探索地图',
+      scaleNote: '轻量原型：1 个游戏单位约等于 5 米的地图距离',
+      fullWalkHours: '3-5小时',
+      updatePlanYears: 5,
+      regions: [
+        { name: '开封城', areaKm2: 5.81, npc: 10000, x: 0.00, z: 0.72, w: 0.34, d: 0.24, color: 0x587f52 },
+        { name: '无心谷', x: -0.58, z: 0.46, w: 0.30, d: 0.22, color: 0x456f43 },
+        { name: '雁门关', x: 0.58, z: 0.46, w: 0.30, d: 0.22, color: 0x6e736e },
+        { name: '燕南', x: 0.00, z: 0.42, w: 0.28, d: 0.22, color: 0x4f814b },
+        { name: '太原盆地', x: -0.56, z: 0.12, w: 0.32, d: 0.24, color: 0x66884c },
+        { name: '江南古道', x: 0.00, z: 0.08, w: 0.30, d: 0.24, color: 0x4f8b55 },
+        { name: '杭州城', areaKm2: 17.43, npc: 15000, x: 0.58, z: 0.08, w: 0.34, d: 0.26, color: 0x4d8e63 },
+        { name: '荆楚', x: -0.56, z: -0.22, w: 0.32, d: 0.24, color: 0x3f7a4a },
+        { name: '汉中盆地', x: 0.00, z: -0.22, w: 0.32, d: 0.24, color: 0x5c8849 },
+        { name: '太湖', areaKm2: 1.2, boats: 500, x: 0.58, z: -0.22, w: 0.34, d: 0.28, color: 0x6f9f78, lake: true },
+        { name: '大巴山', x: -0.56, z: -0.52, w: 0.32, d: 0.24, color: 0x596b5d },
+        { name: '成都盆地', x: 0.00, z: -0.52, w: 0.32, d: 0.24, color: 0x638953 },
+        { name: '南唐', x: 0.58, z: -0.52, w: 0.32, d: 0.24, color: 0x4a7651 },
+        { name: '绣金楼', x: 0.00, z: -0.82, w: 0.72, d: 0.18, color: 0x7b7452 }
+      ]
+    };
+    const makeMob = (label, family, color, overrides={}) => ({
+      label,
+      family,
+      health: overrides.health ?? 70,
+      speed: overrides.speed ?? 1.65,
+      damage: overrides.damage ?? 8,
+      color,
+      ranged: overrides.ranged || false,
+      culturalNote: overrides.culturalNote || ''
+    });
+    const makeBoss = (label, family, color, overrides={}) => ({
+      label,
+      family,
+      health: overrides.health ?? 220,
+      speed: overrides.speed ?? 1.55,
+      damage: overrides.damage ?? 18,
+      color,
+      boss: true,
+      ranged: overrides.ranged || false,
+      culturalNote: overrides.culturalNote || ''
+    });
+    const MONSTER_DEFINITION = {
+      bossTotal: 43,
+      publicBetaNewBossCount: 10,
+      maxActive: 72,
+      activationRadius: 260,
+      despawnRadius: 980,
+      spawnInterval: 0.35,
+      spawnBatch: 3,
+      types: {
+        bandit_grunt: { label: '绿林喽啰', family: '人形敌人', health: 58, speed: 1.55, damage: 7, color: 0x7c3f32 },
+        bandit_brute: { label: '绿林打手', family: '人形敌人', health: 92, speed: 1.25, damage: 12, color: 0x8d4c35 },
+        bandit_adviser: { label: '绿林师爷', family: '人形敌人', health: 68, speed: 1.4, damage: 8, color: 0x5a5f7e, ranged: true },
+        thief: { label: '盗匪', family: '人形敌人', health: 72, speed: 1.8, damage: 9, color: 0x5c4a39 },
+        boar_king: { label: '黑鬃野猪王', family: '野兽首领', health: 220, speed: 1.9, damage: 18, color: 0x2f2622, boss: true },
+        fire_wolf: { label: '赤焰狼王', family: '野兽首领', health: 185, speed: 2.25, damage: 16, color: 0xa94428, boss: true },
+        shadow_panther: { label: '暗影黑豹', family: '野兽首领', health: 170, speed: 2.65, damage: 15, color: 0x202432, boss: true },
+        frost_bear: { label: '冰霜巨熊', family: '野兽首领', health: 260, speed: 1.35, damage: 22, color: 0xc8d7df, boss: true },
+        iron_centipede: { label: '铁心蜈', family: '机关首领', health: 240, speed: 1.45, damage: 20, color: 0x63686e, boss: true, puzzle: true },
+        stupid_thief: makeMob('蠢贼', '常见人形小怪', 0x6b5138),
+        sand_worm: makeMob('沙虫', '野外异虫', 0xb58a4a, { health: 86, speed: 1.2, damage: 10 }),
+        tree_spirit: makeMob('树妖', '野外精怪', 0x3f6b3d, { health: 110, speed: 1.1, damage: 12 }),
+        zhuoyuan: makeMob('灼鸢', '天陉野怪', 0xb14626, { speed: 2.0, damage: 11 }),
+        north_leopard: makeMob('华北豹', '天陉野兽', 0xa9743f, { health: 92, speed: 2.55, damage: 13 }),
+        jackal: makeMob('豺', '天陉野兽', 0x8a6a44, { speed: 2.25, damage: 10 }),
+        wooden_ox: makeMob('木牛', '天陉机关', 0x8b6840, { health: 120, speed: 1.0, damage: 12 }),
+        wooden_mantis: makeMob('木螂', '天陉机关', 0x6f7a42, { speed: 1.9, damage: 11 }),
+        small_wooden_ox: makeMob('小木牛', '天陉机关', 0x9b7446, { health: 55, speed: 1.5, damage: 7 }),
+        earth_walker: makeMob('土行子', '天陉异怪', 0x6f5b3b, { health: 82, speed: 1.75, damage: 9 }),
+        wind_crossbow: makeMob('摇风弩', '天陉机关', 0x6f7578, { health: 76, speed: 0.9, damage: 10, ranged: true }),
+        wooden_viper: makeMob('木虺', '天陉机关蛇', 0x586b45, { health: 88, speed: 2.1, damage: 11 }),
+        yutu_bird: makeMob('於突鸟', '河西梦境异化', 0x6d4f3d, { speed: 2.15, damage: 12, culturalNote: '以吐蕃人和秃鹫为原型，在梦境中异化' }),
+        bone_flower: makeMob('骨生花', '河西梦境异化', 0xd8d0bd, { health: 96, speed: 0.95, damage: 12, culturalNote: '灵感来自佛教白骨观' }),
+        rain_bone_flower: makeMob('霖骨花', '河西梦境异化', 0xb8c9bc, { health: 106, speed: 0.9, damage: 13, culturalNote: '尸骸在梦境中异化而成' }),
+        lost_post_boat: makeMob('迷驿舟', '河西梦境异化', 0x4c6d78, { health: 116, speed: 1.15, damage: 12, culturalNote: '由归乡执念异化而成' }),
+        golden_ou_bird: makeMob('金瓯鸟', '河西梦境异化', 0xd6a83b, { speed: 2.0, damage: 12, culturalNote: '对应中亚粟特商人宰利' }),
+        boshan_camel: makeMob('博山炉骆驼', '河西梦境异化', 0x9b7345, { health: 132, speed: 1.2, damage: 14, culturalNote: '博山炉与驼峰结合，呼应河西梦境主题' }),
+        ink_mongoose: makeMob('墨笔猫鼬', '河西异兽', 0x2f3035, { speed: 2.35, damage: 11 }),
+        running_brush: makeMob('奔跑的笔', '河西异物', 0x33271e, { speed: 2.5, damage: 9 }),
+        boss_wuma: makeBoss('舞马人', '清河BOSS', 0x8a4b3a, { health: 230, speed: 1.8 }),
+        boss_qianye: makeBoss('千夜', '清河BOSS', 0x2b2c48, { health: 260, speed: 1.9, ranged: true }),
+        boss_dalang: makeBoss('大郎', '清河异兽BOSS', 0x735039, { health: 280, speed: 1.45 }),
+        boss_shelangzhong: makeBoss('蛇郎中', '清河BOSS', 0x4e7a54, { health: 240, speed: 1.65 }),
+        boss_daozhu: makeBoss('道主', '开封BOSS', 0x5a4b70, { health: 300, speed: 1.6, ranged: true }),
+        boss_heicaishen: makeBoss('黑财神', '开封BOSS', 0x1f1c22, { health: 320, speed: 1.35, damage: 22 }),
+        boss_guoxin: makeBoss('郭昕', '河西BOSS', 0x78624f, { health: 260, speed: 1.55 }),
+        boss_wucan: makeBoss('五残', '河西BOSS', 0x3f3c45, { health: 300, speed: 1.6 }),
+        boss_zhenguanhou: makeBoss('镇关吼', '河西异兽BOSS', 0x8b6040, { health: 340, speed: 1.45, damage: 24 }),
+        boss_yuezhongshi: makeBoss('月中狮', '河西异兽BOSS', 0xc9b16a, { health: 310, speed: 1.85 }),
+        boss_weimaonv: makeBoss('围帽女', '河西BOSS', 0x755064, { health: 250, speed: 1.9, ranged: true }),
+        boss_tianlu: makeBoss('天禄', '河西异兽BOSS', 0xa47d38, { health: 330, speed: 1.8 }),
+        boss_xiaoxiaoba: makeBoss('小小八', '不见山BOSS', 0x4c5f7d, { health: 245, speed: 2.0 }),
+        boss_sinan_swordsman: makeBoss('司南剑客', '不见山BOSS', 0x596675, { health: 270, speed: 2.1 }),
+        boss_xunxin: makeBoss('寻心', '野外BOSS', 0x6c3851, { health: 260, speed: 1.7 }),
+        boss_yewanshan: makeBoss('叶万山', '野外BOSS', 0x596a3e, { health: 290, speed: 1.5 }),
+        boss_wuxianghuang: makeBoss('无相皇', '终局BOSS', 0x8d7b5a, { health: 430, speed: 1.55, damage: 28, ranged: true }),
+        boss_xiaoshqi: makeBoss('小十七', '野外BOSS', 0x4f6173, { health: 245, speed: 2.05 }),
+        boss_tianying: makeBoss('田英', '野外BOSS', 0x735c40, { health: 255, speed: 1.75 }),
+        boss_piyingshi: makeBoss('皮影师', '特殊BOSS', 0x332c28, { health: 265, speed: 1.45, ranged: true }),
+        boss_yidao: makeBoss('伊刀', '野外BOSS', 0x6d3131, { health: 280, speed: 2.0, damage: 24 }),
+        boss_guishou: makeBoss('鬼手', '特殊BOSS', 0x2b3441, { health: 300, speed: 1.85 }),
+        boss_shuidaoren: makeBoss('睡道人', '特殊BOSS', 0x4d5b63, { health: 275, speed: 1.25, ranged: true }),
+        boss_jiangwulang: makeBoss('江无浪', '野外BOSS', 0x315f73, { health: 275, speed: 1.8 }),
+        boss_wushi_brothers: makeBoss('舞狮兄弟', '公测新增BOSS', 0xd14f32, { health: 310, speed: 2.0 }),
+        boss_white_wolf_lord: makeBoss('白狼主', '公测新增BOSS', 0xdde4e8, { health: 350, speed: 2.2, damage: 24 })
+      },
+      spawnAreas: [
+        { id: 'newbie_field', name: '新手草原', kind: '野外小怪', region: '江南古道', x: 0.00, z: 0.02, radius: 520, maxActive: 36, types: ['bandit_grunt', 'thief', 'stupid_thief', 'jackal'], color: 0xa65a36 },
+        { id: 'main_road_patrol', name: '主路巡逻', kind: '野外小怪', region: '江南古道', x: 0.00, z: 0.16, radius: 430, maxActive: 30, types: ['bandit_grunt', 'thief', 'bandit_brute'], color: 0xa65a36 },
+        { id: 'kaifeng_suburb', name: '开封城郊流寇', kind: '野外小怪', region: '开封城', x: 0.00, z: 0.58, radius: 460, maxActive: 32, types: ['bandit_grunt', 'bandit_adviser', 'thief'], color: 0xa65a36 },
+        { id: 'foye_camp', name: '佛爷寨', kind: '据点营地', region: '开封城', x: -0.08, z: 0.72, radius: 150, maxActive: 3, types: ['bandit_grunt', 'bandit_brute', 'bandit_adviser', 'stupid_thief', 'boss_daozhu', 'boss_heicaishen'], color: 0xb23d32 },
+        { id: 'longhu_camp', name: '龙虎寨', kind: '据点营地', region: '燕南', x: 0.08, z: 0.42, radius: 145, maxActive: 3, types: ['bandit_grunt', 'thief', 'bandit_brute', 'boss_wuma', 'boss_qianye'], color: 0xb23d32 },
+        { id: 'jiurou_camp', name: '酒肉山林', kind: '据点营地', region: '荆楚', x: -0.58, z: -0.22, radius: 150, maxActive: 3, types: ['bandit_grunt', 'thief', 'bandit_adviser', 'tree_spirit', 'boss_dalang', 'boss_shelangzhong'], color: 0xb23d32 },
+        { id: 'kumu_pass', name: '枯木隘', kind: '据点营地', region: '大巴山', x: -0.56, z: -0.52, radius: 155, maxActive: 3, types: ['bandit_grunt', 'bandit_brute', 'sand_worm', 'boss_yewanshan', 'boss_guishou'], color: 0xb23d32 },
+        { id: 'northeast_forest_boss', name: '不见山东北山林', kind: '野外BOSS区域', region: '雁门关', x: 0.64, z: 0.52, radius: 180, maxActive: 10, types: ['fire_wolf', 'north_leopard', 'jackal', 'boss_xiaoxiaoba', 'boss_sinan_swordsman'], color: 0x9c5b2f },
+        { id: 'southwest_valley_boss', name: '不见山西南山谷', kind: '野外BOSS区域', region: '汉中盆地', x: -0.08, z: -0.30, radius: 175, maxActive: 10, types: ['boar_king', 'wooden_ox', 'earth_walker', 'boss_xunxin', 'boss_tianying'], color: 0x9c5b2f },
+        { id: 'east_jungle_boss', name: '不见山东部丛林', kind: '野外BOSS区域', region: '南唐', x: 0.64, z: -0.50, radius: 175, maxActive: 10, types: ['shadow_panther', 'wooden_mantis', 'wooden_viper', 'boss_yidao', 'boss_jiangwulang'], color: 0x9c5b2f },
+        { id: 'north_icefield_boss', name: '不见山北部冰原', kind: '野外BOSS区域', region: '雁门关', x: 0.48, z: 0.62, radius: 170, maxActive: 10, types: ['frost_bear', 'zhuoyuan', 'wind_crossbow', 'boss_white_wolf_lord'], color: 0x9c5b2f },
+        { id: 'xuanhe_dungeon', name: '悬河之墟地窟', kind: '地窟副本', region: '杭州城', x: 0.50, z: 0.04, radius: 135, maxActive: 18, types: ['bandit_adviser', 'iron_centipede', 'lost_post_boat', 'golden_ou_bird', 'boss_piyingshi', 'boss_shuidaoren'], color: 0x6f3a8b },
+        { id: 'tiangong_dungeon', name: '天工地窟', kind: '地窟副本', region: '太湖', x: 0.50, z: -0.26, radius: 135, maxActive: 18, types: ['bandit_brute', 'iron_centipede', 'bone_flower', 'rain_bone_flower', 'ink_mongoose', 'running_brush', 'boss_wuxianghuang'], color: 0x6f3a8b },
+        { id: 'hexi_dream', name: '河西梦境', kind: '野外BOSS区域', region: '绣金楼', x: 0.00, z: -0.82, radius: 210, maxActive: 18, types: ['yutu_bird', 'bone_flower', 'rain_bone_flower', 'lost_post_boat', 'golden_ou_bird', 'boshan_camel', 'boss_guoxin', 'boss_wucan', 'boss_zhenguanhou', 'boss_yuezhongshi', 'boss_weimaonv', 'boss_tianlu'], color: 0x9c5b2f },
+        { id: 'tianxing_mechanism', name: '天陉机关野地', kind: '野外BOSS区域', region: '太原盆地', x: -0.56, z: 0.12, radius: 190, maxActive: 18, types: ['zhuoyuan', 'wooden_ox', 'wooden_mantis', 'small_wooden_ox', 'earth_walker', 'wind_crossbow', 'wooden_viper', 'boss_wushi_brothers'], color: 0x9c5b2f }
+      ],
+      collectibles: [
+        '毒蛙', '毒精', '金刀铁翼螂', '匕见将军', '细语蜂窝', '悼月金蟾', '三更夜磨子', '刺猬', '獐', '知了猴'
+      ]
+    };
+    const WORLD_HALF_X = 5200;
+    const WORLD_HALF_Z = 3800;
+    const WORLD_SURFACE_TOP = 8;
+    const WORLD_SURFACE_BOTTOM = -9;
+    const blockSize = 1;
+    const grid = new Map();
+    const generatedColumns = new Set();
+    const colliders = [];
+    const monsters = [];
+    const animals = [];
+    const projectiles = [];
+    const torches = [];
+    const animalRegenState = {
+      sheep: { active: false, timer: 0 },
+      cow: { active: false, timer: 0 },
+      pig: { active: false, timer: 0 }
+    };
+    let timeOfDay = 0.22; // brighter day start
+    let daySpeed = 0.012; // full cycle about 83 sec, but weighted by phase logic
+    let spawnTimer = 0;
+    let hudUpdateTimer = 0;
+
+    const player = {
+      pos: new THREE.Vector3(0, 3.2, 12),
+      vel: new THREE.Vector3(),
+      yaw: 0,
+      pitch: -0.12,
+      height: 1.7,
+      radius: 0.35,
+      speed: 5.6,
+      onGround: false,
+      health: 100,
+      hurtCooldown: 0,
+      attackCooldown: 0,
+      role: 'warrior',
+      weaponIndex: 0,
+      skillIndex: 0,
+      skillCooldown: 0,
+      attackAnim: 0,
+      studyProgress: 0
+    };
+
+    const playerRender = {
+      sprite: null,
+      body: null,
+      head: null,
+      leftArm: null,
+      rightArm: null,
+      weapon: null
+    };
+
+    const classLoadouts = {
+      warrior: {
+        label: '战士',
+        weapons: [
+          { id: 'spear', label: '长枪', kind: 'melee', damage: 12, range: 3.8, cooldown: 0.42, push: 1.9 },
+          { id: 'sword', label: '宝剑', kind: 'melee', damage: 9, range: 2.7, cooldown: 0.28, push: 1.1 }
+        ]
+      },
+      archer: {
+        label: '射手',
+        weapons: [
+          { id: 'bow', label: '弓箭', kind: 'ranged', damage: 8, speed: 17, cooldown: 0.34 },
+          { id: 'crossbow', label: '弩', kind: 'ranged', damage: 14, speed: 21, cooldown: 0.62 }
+        ]
+      }
+    };
+
+    const SKILL_DEFINITION = {
+      currency: { id: 'changming_yu', label: '长鸣玉', from: '杀怪获取，用于兑换心法残页' },
+      acquisition: {
+        steal: [
+          { skillId: 'yaowuxing', label: '杳无形', area: '悬河之墟地窟', note: '完成偷师有道后，长按G观察金色光圈领悟' },
+          { skillId: 'qingshan_zhibi', label: '青山执笔', area: '天工地窟', note: '集齐密窟宝箱后偷师获得' },
+          { skillId: 'suanjing_shishu', label: '算经十书', area: '悬河之墟地窟', note: '潜入练武密窟偷师获得' },
+          { skillId: 'jiuqu_qiang', label: '九曲惊神枪', area: '枯木隘', note: '完成偷师关卡获得' }
+        ],
+        quests: [
+          { skillId: 'wangchuan_juexiang', label: '忘川绝响', source: '火烧不羡仙' },
+          { skillId: 'huashang_yueling', label: '花上月令', source: '繁花谍影' },
+          { skillId: 'lingxu', label: '凌虚一指', source: '河山如故' },
+          { skillId: 'shuangtian_baiye', label: '双天白夜', source: '独立寒霜' }
+        ],
+        shops: [
+          { mindId: 'yishui_ge', label: '易水歌', npc: '唐宝', region: '清河不羡仙', cost: 5000, fragments: 10 },
+          { mindId: 'sishi_wuchang', label: '四时无常', npc: '曹生书画店', region: '开封勾栏瓦肆', cost: 5000, fragments: 10 }
+        ],
+        exploration: [
+          { skillId: 'lingyun_ta', label: '凌云踏', source: '将军祠地下迷宫' },
+          { skillId: 'jinyu', label: '金玉手', source: '浣石浦严老头' },
+          { skillId: 'shexing_nayue', label: '摄星拿月', source: '神仙渡仇越海任务' },
+          { mindId: 'jianqi_zongheng', label: '剑气纵横', source: '鬼市不知名旧书概率开出残页' }
+        ]
+      },
+      skills: [
+        { id: 'taiji', label: '太极', type: '特殊技', cooldown: 6.0, unlocked: true, effect: '近身抓取甩飞' },
+        { id: 'jinyu', label: '金玉手', type: '奇术', cooldown: 7.0, unlocked: true, effect: '远程点穴眩晕' },
+        { id: 'lingxu', label: '凌虚一指', type: '奇术', cooldown: 8.0, unlocked: true, effect: '背后偷袭位移' },
+        { id: 'yaowuxing', label: '杳无形', type: '奇术', cooldown: 10.0, unlocked: false, effect: '短暂隐身脱战' },
+        { id: 'lingyun_ta', label: '凌云踏', type: '奇术', cooldown: 5.5, unlocked: false, effect: '向前位移' },
+        { id: 'shexing_nayue', label: '摄星拿月', type: '奇术', cooldown: 7.5, unlocked: false, effect: '远程隔空取物并打断敌人' },
+        { id: 'xiaoyin_qianlang', label: '箫吟千浪', type: '奇术', cooldown: 11.0, unlocked: false, effect: '群体伤害与控制' },
+        { id: 'qingshan_zhibi', label: '青山执笔', type: '武学技', cooldown: 6.5, unlocked: false, effect: '远程飘逸输出' },
+        { id: 'jiuqu_qiang', label: '九曲惊神枪', type: '武学技', cooldown: 6.5, unlocked: false, effect: '爆发枪法' }
+      ],
+      mindMethods: [
+        { id: 'yishui_ge', label: '易水歌', kind: '通用心法', effect: '增伤和治疗提升' },
+        { id: 'sishi_wuchang', label: '四时无常', kind: '通用心法', effect: '易武后增伤和暴击提升' },
+        { id: 'jianqi_zongheng', label: '剑气纵横', kind: '通用心法', effect: '连招强化和范围伤害' },
+        { id: 'wuming_xinfa', label: '无名心法', kind: '流派心法', effect: '鸣金虹适配' }
+      ],
+      schools: [
+        { school: '鸣金·虹', martial: '无名剑法 + 无名枪法', role: '远程蓄力输出' },
+        { school: '鸣金·影', martial: '积矩九剑 + 九曲惊神枪', role: '高上限爆发输出' },
+        { school: '裂石·威', martial: '嗟夫刀法 + 八方风雷枪', role: '坦克/近战输出' },
+        { school: '裂石·钧', martial: '斩雪刀法 + 十方破阵', role: '近战持续输出' },
+        { school: '牵丝·玉', martial: '青山执笔 + 九重春色', role: '远程飘逸输出' },
+        { school: '牵丝·霖', martial: '明川药典 + 千香引魂蛊', role: '治疗/辅助' },
+        { school: '破竹·风', martial: '泥犁三垢 + 粟子游尘', role: '闪避反击流' },
+        { school: '破竹·尘', martial: '醉梦游春 + 粟子行云', role: '功能性输出' },
+        { school: '破竹·鸢', martial: '天志垂象 + 千机锁天', role: '专属输出' }
+      ]
+    };
+    const skillBook = SKILL_DEFINITION.skills;
+
+    const weaponSpriteConfig = {
+      spear: {
+        src: './assets/spear.png',
+        width: 0.78, height: 1.72,
+        idle: { px: 0.58, py: 1.02, pz: 0.22, rx: 0, rz: 0.08 },
+        attack: { px: 0.82, py: 1.06, pz: 0.48, rx: -1.05, rz: -0.9 }
+      },
+      sword: {
+        src: './assets/sword.png',
+        width: 0.98, height: 1.42,
+        idle: { px: 0.56, py: 0.94, pz: 0.24, rx: 0, rz: 0.16 },
+        attack: { px: 0.8, py: 1.02, pz: 0.42, rx: -1.2, rz: -1.18 }
+      },
+      bow: {
+        src: './assets/bow.png',
+        width: 1.02, height: 1.62,
+        idle: { px: 0.54, py: 0.96, pz: 0.26, rx: 0, rz: 0.06 },
+        attack: { px: 0.28, py: 1.04, pz: 0.44, rx: -0.22, rz: -0.28 }
+      },
+      crossbow: {
+        src: './assets/crossbow.png',
+        width: 1.02, height: 1.36,
+        idle: { px: 0.56, py: 0.92, pz: 0.22, rx: 0, rz: 0.12 },
+        attack: { px: 0.24, py: 1.02, pz: 0.46, rx: -0.32, rz: -0.22 }
+      }
+    };
+    const weaponSpriteMaterials = {};
+
+    const inventory = {
+      grass: 0,
+      dirt: 0,
+      stone: 0,
+      wood: 3,
+      planks: 0,
+      coal: 0,
+      changming_yu: 0,
+      torch: 0,
+      wood_door: 0,
+      wood_window: 0,
+      bed: 0,
+      wood_house: 0,
+      stone_house: 0,
+      obsidian_house: 0,
+      gold_house: 0,
+      diamond_house: 0,
+      wood_pickaxe: 0,
+      stone_pickaxe: 0,
+      iron_pickaxe: 0,
+      gold_pickaxe: 0,
+      diamond_pickaxe: 0,
+      wood_sword: 0,
+      diamond_sword: 0,
+      wood_bow: 0,
+      stone_bow: 0,
+      gold_bow: 0,
+      obsidian_bow: 0,
+      diamond_bow: 0,
+      sand: 0,
+      stone_bricks: 0,
+      obsidian: 0,
+      bedrock: 0,
+      iron_ore: 0,
+      gold_ore: 0,
+      diamond_ore: 0,
+      wool: 0,
+      beef: 0,
+      pork: 0
+    };
+    const initialInventory = { ...inventory };
+
+    const hotbar = [
+      { id: 'wood_sword', label: '木剑', kind: 'weapon' },
+      { id: 'diamond_sword', label: '钻石剑', kind: 'weapon' },
+      { id: 'wood_bow', label: '木弓', kind: 'weapon' },
+      { id: 'stone_bow', label: '石弓', kind: 'weapon' },
+      { id: 'gold_bow', label: '金弓', kind: 'weapon' },
+      { id: 'obsidian_bow', label: '黑曜石弓', kind: 'weapon' },
+      { id: 'diamond_bow', label: '钻石弓', kind: 'weapon' },
+      { id: 'wood_pickaxe', label: '木镐', kind: 'tool' },
+      { id: 'stone_pickaxe', label: '石镐', kind: 'tool' },
+      { id: 'iron_pickaxe', label: '铁镐', kind: 'tool' },
+      { id: 'gold_pickaxe', label: '金镐', kind: 'tool' },
+      { id: 'diamond_pickaxe', label: '钻石镐', kind: 'tool' },
+      { id: 'dirt', label: '泥土', kind: 'block' },
+      { id: 'grass', label: '草块', kind: 'block' },
+      { id: 'stone', label: '石头', kind: 'block' },
+      { id: 'wood', label: '木头', kind: 'block' },
+      { id: 'sand', label: '沙子', kind: 'block' },
+      { id: 'torch', label: '火把', kind: 'block' },
+      { id: 'wood_door', label: '木门', kind: 'block' },
+      { id: 'wood_window', label: '木窗', kind: 'block' },
+      { id: 'bed', label: '床', kind: 'block' },
+      { id: 'wood_house', label: '木头屋', kind: 'block' },
+      { id: 'stone_house', label: '石头屋', kind: 'block' },
+      { id: 'obsidian_house', label: '黑曜石屋', kind: 'block' },
+      { id: 'gold_house', label: '金屋', kind: 'block' },
+      { id: 'diamond_house', label: '钻石屋', kind: 'block' },
+      { id: 'beef', label: '牛肉', kind: 'consumable' },
+      { id: 'pork', label: '猪肉', kind: 'consumable' },
+      { id: 'stone_bricks', label: '石砖', kind: 'block' },
+      { id: 'obsidian', label: '黑曜石', kind: 'block' }
+    ];
+    let selectedIndex = 0;
+    const pickaxeTiers = [
+      { id: 'wood_pickaxe', label: '木镐', tier: 1, damage: 12 },
+      { id: 'stone_pickaxe', label: '石镐', tier: 2, damage: 16 },
+      { id: 'iron_pickaxe', label: '铁镐', tier: 3, damage: 20 },
+      { id: 'gold_pickaxe', label: '金镐', tier: 3, damage: 18 },
+      { id: 'diamond_pickaxe', label: '钻石镐', tier: 4, damage: 24 }
+    ];
+    const meleeWeapons = [
+      { id: 'wood_sword', label: '木剑', damage: 18 },
+      { id: 'diamond_sword', label: '钻石剑', damage: 30 }
+    ];
+    const bowWeapons = [
+      { id: 'wood_bow', label: '木弓', damage: 22, speed: 15, cooldown: 0.45 },
+      { id: 'stone_bow', label: '石弓', damage: 28, speed: 16, cooldown: 0.42 },
+      { id: 'gold_bow', label: '金弓', damage: 32, speed: 17, cooldown: 0.38 },
+      { id: 'obsidian_bow', label: '黑曜石弓', damage: 36, speed: 18, cooldown: 0.35 },
+      { id: 'diamond_bow', label: '钻石弓', damage: 42, speed: 19, cooldown: 0.32 }
+    ];
+    const sharedGeo = {
+      cube: new THREE.BoxGeometry(1, 1, 1),
+      water: new THREE.BoxGeometry(1, 0.9, 1),
+      leaves: new THREE.BoxGeometry(1, 1, 1),
+      torch: new THREE.BoxGeometry(0.25, 0.8, 0.25),
+      arrow: new THREE.BoxGeometry(0.12, 0.12, 0.7),
+      animalHpBg: new THREE.PlaneGeometry(1.0, 0.10),
+      animalHpFill: new THREE.PlaneGeometry(0.96, 0.06),
+      monsterHpBg: new THREE.PlaneGeometry(1.1, 0.12),
+      monsterHpFill: new THREE.PlaneGeometry(1.06, 0.08),
+      farFloor: new THREE.BoxGeometry(180, 1, 180)
+    };
+
+    const materials = {
+      grass: new THREE.MeshLambertMaterial({ color: 0x5aa14f }),
+      dirt: new THREE.MeshLambertMaterial({ color: 0x8b5a2b }),
+      stone: new THREE.MeshLambertMaterial({ color: 0x8d9399 }),
+      wood: new THREE.MeshLambertMaterial({ color: 0x8a623d }),
+      planks: new THREE.MeshLambertMaterial({ color: 0xb8844f }),
+      leaves: new THREE.MeshLambertMaterial({ color: 0x3f8a42 }),
+      sand: new THREE.MeshLambertMaterial({ color: 0xd8cb7a }),
+      coal: new THREE.MeshLambertMaterial({ color: 0x2f3438 }),
+      obsidian: new THREE.MeshLambertMaterial({ color: 0x241235 }),
+      stone_bricks: new THREE.MeshLambertMaterial({ color: 0x6f747a }),
+      bedrock: new THREE.MeshLambertMaterial({ color: 0x1b1b1b }),
+      iron_ore: new THREE.MeshLambertMaterial({ color: 0xb0826b }),
+      gold_ore: new THREE.MeshLambertMaterial({ color: 0xdcbf3a }),
+      diamond_ore: new THREE.MeshLambertMaterial({ color: 0x56e0e6 }),
+      water: new THREE.MeshLambertMaterial({ color: 0x4ea7da, transparent: true, opacity: 0.85 }),
+      torch: new THREE.MeshLambertMaterial({ color: 0xe0b65a }),
+      wood_door: new THREE.MeshLambertMaterial({ color: 0x8f6338 }),
+      wood_window: new THREE.MeshLambertMaterial({ color: 0xa77245 }),
+      window_glass: new THREE.MeshLambertMaterial({ color: 0xc8dfef, transparent: true, opacity: 0.45 }),
+      bed: new THREE.MeshLambertMaterial({ color: 0xb33d48 }),
+      bed_pillow: new THREE.MeshLambertMaterial({ color: 0xf1ede6 }),
+      zombie: new THREE.MeshLambertMaterial({ color: 0x4ea161 }),
+      skeleton: new THREE.MeshLambertMaterial({ color: 0xe8ecef }),
+      creeper: new THREE.MeshLambertMaterial({ color: 0x4cbf52 }),
+      arrow: new THREE.MeshLambertMaterial({ color: 0x5b402c }),
+      sheep: new THREE.MeshLambertMaterial({ color: 0xf3f3f1 }),
+      sheepFace: new THREE.MeshLambertMaterial({ color: 0x444444 }),
+      cow: new THREE.MeshLambertMaterial({ color: 0x6b4a30 }),
+      cowPatch: new THREE.MeshLambertMaterial({ color: 0x2a221c }),
+      pig: new THREE.MeshLambertMaterial({ color: 0xe7a0a7 }),
+      pigSnout: new THREE.MeshLambertMaterial({ color: 0xd88290 }),
+      playerCloth: new THREE.MeshLambertMaterial({ color: 0x2d4f8c }),
+      playerSkin: new THREE.MeshLambertMaterial({ color: 0xe0ba93 }),
+      warriorWeapon: new THREE.MeshLambertMaterial({ color: 0xbfc9d6 }),
+      archerWeapon: new THREE.MeshLambertMaterial({ color: 0x8a5f3f }),
+      raider: new THREE.MeshLambertMaterial({ color: 0x8c3630 }),
+      hunter: new THREE.MeshLambertMaterial({ color: 0x4f6f3c }),
+      enemySkin: new THREE.MeshLambertMaterial({ color: 0xd2ad87 }),
+      enemyWeapon: new THREE.MeshLambertMaterial({ color: 0xb9c0ca })
+    };
+
+    // Scene bootstrap
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x8fd0ff);
+      scene.fog = new THREE.Fog(0x8fd0ff, 28, 240);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 520);
+      camera.rotation.order = 'YXZ';
+
+      renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power' });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(1);
+      renderer.shadowMap.enabled = false;
+      gameEl.innerHTML = '';
+      gameEl.appendChild(renderer.domElement);
+
+      clock = new THREE.Clock();
+
+      hemiLight = new THREE.HemisphereLight(0xffffff, 0x88a0b8, 1.15);
+      scene.add(hemiLight);
+
+      dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(10, 18, 8);
+      scene.add(dirLight);
+
+      worldGroup = new THREE.Group();
+      decoGroup = new THREE.Group();
+      monsterGroup = new THREE.Group();
+      animalGroup = new THREE.Group();
+      projectileGroup = new THREE.Group();
+      worldFxGroup = new THREE.Group();
+      playerGroup = new THREE.Group();
+      scene.add(worldGroup, decoGroup, monsterGroup, animalGroup, projectileGroup, worldFxGroup, playerGroup);
+
+      createWorld();
+      buildPlayerAvatar();
+      resetPlayer();
+      bindEvents();
+      updateHotbar();
+      refreshCraftButtons();
+      setMessage('探索战斗原型已载入，选择职业后进入荒野。', 3);
+      animate();
+    }
+
+    // Input and UI events
+    function bindEvents() {
+      window.onresize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      };
+
+      document.onkeydown = (e) => {
+        keys[e.key.toLowerCase()] = true;
+        if (e.key >= '1' && e.key <= '3') {
+          selectSkill(Number(e.key) - 1);
+        }
+        if (e.key.toLowerCase() === 'q' && !dead) {
+          switchWeapon();
+        }
+        if (e.key.toLowerCase() === 'e' && !dead) {
+          castCurrentSkill();
+        }
+        if (e.key.toLowerCase() === 'g' && !dead) {
+          player.studyProgress = Math.max(player.studyProgress, 0.01);
+        }
+        if (e.key.toLowerCase() === 'r') {
+          restartGame();
+        }
+        if (e.key === 'Escape') {
+          document.exitPointerLock?.();
+        }
+      };
+
+      document.onkeyup = (e) => {
+        keys[e.key.toLowerCase()] = false;
+        if (e.key.toLowerCase() === 'g') {
+          player.studyProgress = 0;
+        }
+      };
+
+      renderer.domElement.onmousedown = (e) => {
+        if (!gameStarted || dead) return;
+        mouseLookActive = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        if (document.pointerLockElement !== renderer.domElement) {
+          try {
+            renderer.domElement.requestPointerLock?.();
+          } catch (err) {
+            console.warn('pointer lock request failed:', err);
+          }
+          return;
+        }
+        if (e.button === 0) {
+          doLightAttack();
+        } else if (e.button === 2) {
+          e.preventDefault();
+          setMessage('这版以探索战斗为主，右键暂不放置建筑', 0.9);
+        }
+      };
+
+      document.onmouseup = () => {
+        mouseLookActive = false;
+      };
+
+      renderer.domElement.oncontextmenu = (e) => e.preventDefault();
+
+      document.onmousemove = (e) => {
+        if (!gameStarted || dead) return;
+        const locked = document.pointerLockElement === renderer.domElement;
+        if (!locked && !mouseLookActive && e.buttons !== 1) return;
+        const sens = 0.0021;
+        let dx = e.movementX ?? e.mozMovementX ?? e.webkitMovementX;
+        let dy = e.movementY ?? e.mozMovementY ?? e.webkitMovementY;
+        if (!Number.isFinite(dx) || (!locked && dx === 0)) dx = e.clientX - lastMouseX;
+        if (!Number.isFinite(dy) || (!locked && dy === 0)) dy = e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        player.yaw -= dx * sens;
+        player.pitch -= dy * sens;
+        player.pitch = Math.max(-1.18, Math.min(1.18, player.pitch));
+      };
+
+      closeCraftBtn.onclick = () => toggleCraft(false);
+      [...document.querySelectorAll('[data-craft]')].forEach(btn => {
+        btn.onclick = () => craftItem(btn.dataset.craft);
+      });
+    }
+
+    // World generation and reset
+    function createWorld() {
+      clearWorldEffects();
+      grid.clear();
+      generatedColumns.clear();
+      colliders.length = 0;
+      monsters.length = 0;
+      animals.length = 0;
+      projectiles.length = 0;
+      torches.length = 0;
+      animalRegenState.sheep.active = false;
+      animalRegenState.sheep.timer = 0;
+      animalRegenState.cow.active = false;
+      animalRegenState.cow.timer = 0;
+      animalRegenState.pig.active = false;
+      animalRegenState.pig.timer = 0;
+      worldGroup.clear();
+      decoGroup.clear();
+      monsterGroup.clear();
+      animalGroup.clear();
+      projectileGroup.clear();
+      playerGroup.clear();
+      buildPlayerAvatar();
+
+      addTerrainRect(0, 0, WORLD_HALF_X * 2, WORLD_HALF_Z * 2, 0x2f7c34, 1.0, 0);
+
+      for (const region of MAP_DEFINITION.regions) {
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(region.w * WORLD_HALF_X * 2, 0.04, region.d * WORLD_HALF_Z * 2),
+          new THREE.MeshLambertMaterial({ color: region.color, transparent: true, opacity: 0.34 })
+        );
+        mesh.position.set(region.x * WORLD_HALF_X, 0.54, region.z * WORLD_HALF_Z);
+        mesh.userData.noHit = true;
+        decoGroup.add(mesh);
+      }
+
+      const taihu = MAP_DEFINITION.regions.find(region => region.name === '太湖');
+      const lakeX = (taihu?.x || 0.58) * WORLD_HALF_X;
+      const lakeZ = (taihu?.z || -0.22) * WORLD_HALF_Z;
+      const lakeSize = Math.min(WORLD_HALF_X, WORLD_HALF_Z) * 0.26;
+      addTerrainRect(lakeX, lakeZ, lakeSize * 1.38, lakeSize * 1.38, 0xd8cb7a, 0.12, 0.56);
+      const water = new THREE.Mesh(new THREE.BoxGeometry(lakeSize, 0.12, lakeSize), materials.water);
+      water.position.set(lakeX, 0.66, lakeZ);
+      water.userData.noHit = true;
+      decoGroup.add(water);
+
+      for (const area of MONSTER_DEFINITION.spawnAreas) {
+        addTerrainRect(
+          area.x * WORLD_HALF_X,
+          area.z * WORLD_HALF_Z,
+          area.radius * 2,
+          area.radius * 2,
+          area.color,
+          0.08,
+          0.68,
+          { opacity: area.kind === '地窟副本' ? 0.42 : 0.32 }
+        );
+      }
+
+      createLandmarks();
+
+      addTerrainRect(0, -WORLD_HALF_Z - 0.5, WORLD_HALF_X * 2, 1, 0x1e2228, 2.0, 0.5);
+      addTerrainRect(0, WORLD_HALF_Z + 0.5, WORLD_HALF_X * 2, 1, 0x1e2228, 2.0, 0.5);
+      addTerrainRect(-WORLD_HALF_X - 0.5, 0, 1, WORLD_HALF_Z * 2, 0x1e2228, 2.0, 0.5);
+      addTerrainRect(WORLD_HALF_X + 0.5, 0, 1, WORLD_HALF_Z * 2, 0x1e2228, 2.0, 0.5);
+
+      generatedColumns.add('flat-exploration-map');
+    }
+
+    function addTerrainRect(x, z, width, depth, color, height=1.0, y=0, options={}) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        new THREE.MeshLambertMaterial({
+          color,
+          transparent: options.opacity != null,
+          opacity: options.opacity ?? 1
+        })
+      );
+      mesh.position.set(x, y, z);
+      mesh.userData.noHit = true;
+      worldGroup.add(mesh);
+      return mesh;
+    }
+
+    function createLandmarks() {
+      const roadMat = new THREE.MeshLambertMaterial({ color: 0x8a8068 });
+      const woodMat = new THREE.MeshLambertMaterial({ color: 0x7a4d2a });
+      const stoneMat = new THREE.MeshLambertMaterial({ color: 0x7f8588 });
+      const darkMat = new THREE.MeshLambertMaterial({ color: 0x2e2a28 });
+      const bannerMat = new THREE.MeshLambertMaterial({ color: 0xb13f32 });
+      const roofMat = new THREE.MeshLambertMaterial({ color: 0x5d4a35 });
+
+      addFlatMesh(0, 0, 20, 900, roadMat, 0.73);
+      addFlatMesh(0, 0, 900, 18, roadMat, 0.74);
+
+      createOutpost(0, 68, woodMat, roofMat, bannerMat);
+      createGate(0, 220, stoneMat, roofMat, 1.15);
+      createGate(-260, 0, stoneMat, roofMat, 0);
+      createGate(260, 0, stoneMat, roofMat, 0);
+
+      createMountainCluster(MAP_DEFINITION.regions.find(r => r.name === '雁门关'), 0x747a7b);
+      createMountainCluster(MAP_DEFINITION.regions.find(r => r.name === '大巴山'), 0x5d6660);
+
+      for (const area of MONSTER_DEFINITION.spawnAreas) {
+        if (area.kind === '野外小怪') {
+          createWildSpawnMarker(area);
+        } else if (area.kind === '据点营地') {
+          createCamp(area, woodMat, bannerMat);
+        } else if (area.kind === '野外BOSS区域') {
+          createBossStones(area, darkMat, stoneMat);
+        } else {
+          createDungeonMouth(area, darkMat, stoneMat);
+        }
+      }
+    }
+
+    function createWildSpawnMarker(area) {
+      addTerrainRect(
+        area.x * WORLD_HALF_X,
+        area.z * WORLD_HALF_Z,
+        area.radius * 1.55,
+        area.radius * 1.15,
+        area.color,
+        0.04,
+        0.69,
+        { opacity: 0.18 }
+      );
+    }
+
+    function addFlatMesh(x, z, width, depth, material, y=0.72) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, 0.06, depth), material);
+      mesh.position.set(x, y, z);
+      mesh.userData.noHit = true;
+      decoGroup.add(mesh);
+      return mesh;
+    }
+
+    function addBoxMesh(x, y, z, width, height, depth, material, group=decoGroup, options={ solid: true }) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+      mesh.position.set(x, y, z);
+      mesh.userData = { solid: options.solid !== false, landmark: true };
+      group.add(mesh);
+      if (mesh.userData.solid) colliders.push(mesh);
+      return mesh;
+    }
+
+    function createOutpost(x, z, woodMat, roofMat, bannerMat) {
+      addBoxMesh(x, 1.1, z, 34, 1.2, 24, woodMat);
+      addBoxMesh(x, 2.0, z, 42, 0.5, 30, roofMat);
+      addBoxMesh(x - 34, 3.4, z - 16, 5, 5.2, 5, woodMat);
+      addBoxMesh(x + 34, 3.4, z - 16, 5, 5.2, 5, woodMat);
+      addBoxMesh(x - 34, 6.2, z - 16, 8, 0.6, 8, roofMat);
+      addBoxMesh(x + 34, 6.2, z - 16, 8, 0.6, 8, roofMat);
+      addBoxMesh(x, 5.2, z + 22, 2, 8, 2, woodMat);
+      addBoxMesh(x + 5, 7.2, z + 22, 10, 5, 0.4, bannerMat);
+    }
+
+    function createGate(x, z, stoneMat, roofMat, rotationY) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotationY;
+      decoGroup.add(group);
+      addBoxMesh(-18, 5, 0, 8, 10, 8, stoneMat, group);
+      addBoxMesh(18, 5, 0, 8, 10, 8, stoneMat, group);
+      addBoxMesh(0, 11, 0, 44, 4, 8, roofMat, group);
+    }
+
+    function createCamp(area, woodMat, bannerMat) {
+      const x = area.x * WORLD_HALF_X;
+      const z = area.z * WORLD_HALF_Z;
+      addFlatMesh(x, z, area.radius * 1.35, area.radius * 1.05, new THREE.MeshLambertMaterial({ color: 0x654434 }), 0.76);
+      for (let i = 0; i < 4; i++) {
+        const angle = i * Math.PI * 0.5 + 0.35;
+        const px = x + Math.cos(angle) * area.radius * 0.38;
+        const pz = z + Math.sin(angle) * area.radius * 0.38;
+        addBoxMesh(px, 1.5, pz, 12, 3, 9, woodMat);
+        addBoxMesh(px, 4.0, pz, 16, 0.6, 12, bannerMat);
+      }
+    }
+
+    function createBossStones(area, darkMat, stoneMat) {
+      const x = area.x * WORLD_HALF_X;
+      const z = area.z * WORLD_HALF_Z;
+      for (let i = 0; i < 7; i++) {
+        const angle = i / 7 * Math.PI * 2;
+        const dist = area.radius * (0.28 + (i % 3) * 0.08);
+        addBoxMesh(x + Math.cos(angle) * dist, 3 + i % 2, z + Math.sin(angle) * dist, 12, 6 + i % 3 * 3, 10, i % 2 ? darkMat : stoneMat);
+      }
+    }
+
+    function createDungeonMouth(area, darkMat, stoneMat) {
+      const x = area.x * WORLD_HALF_X;
+      const z = area.z * WORLD_HALF_Z;
+      addBoxMesh(x, 1.4, z, 46, 2.8, 26, darkMat);
+      addBoxMesh(x - 28, 4, z, 8, 8, 8, stoneMat);
+      addBoxMesh(x + 28, 4, z, 8, 8, 8, stoneMat);
+      addBoxMesh(x, 8, z, 64, 6, 10, stoneMat);
+    }
+
+    function createMountainCluster(region, color) {
+      if (!region) return;
+      const mat = new THREE.MeshLambertMaterial({ color });
+      const baseX = region.x * WORLD_HALF_X;
+      const baseZ = region.z * WORLD_HALF_Z;
+      for (let i = 0; i < 8; i++) {
+        const px = baseX + (i % 4 - 1.5) * 90;
+        const pz = baseZ + (Math.floor(i / 4) - 0.5) * 100;
+        addBoxMesh(px, 14 + i * 1.2, pz, 42, 28 + i * 3, 38, mat);
+      }
+    }
+
+    function clearDynamicWorldEntities() {
+      monsters.length = 0;
+      animals.length = 0;
+      projectiles.length = 0;
+      monsterGroup.clear();
+      animalGroup.clear();
+      projectileGroup.clear();
+      animalRegenState.sheep.active = false;
+      animalRegenState.sheep.timer = 0;
+      animalRegenState.cow.active = false;
+      animalRegenState.cow.timer = 0;
+      animalRegenState.pig.active = false;
+      animalRegenState.pig.timer = 0;
+    }
+
+    function clearWorldEffects() {
+      if (!worldFxGroup) return;
+      for (const torch of torches) {
+        worldFxGroup.remove(torch.light);
+      }
+      worldFxGroup.clear();
+    }
+
+    function columnKey(x, z) {
+      return `${x},${z}`;
+    }
+
+    function pseudoNoise2D(x, z, seed=0) {
+      const s = Math.sin((x + seed * 17.13) * 127.1 + (z - seed * 9.37) * 311.7) * 43758.5453123;
+      return s - Math.floor(s);
+    }
+
+    function getRegionAt(x, z) {
+      const xr = x / WORLD_HALF_X;
+      const zr = z / WORLD_HALF_Z;
+      for (const region of MAP_DEFINITION.regions) {
+        if (
+          Math.abs(xr - region.x) <= region.w * 0.5 &&
+          Math.abs(zr - region.z) <= region.d * 0.5
+        ) {
+          return region.name;
+        }
+      }
+      return '荒野边境';
+    }
+
+    function getTerrainProfile(x, z) {
+      const surface = 0;
+      const region = getRegionAt(x, z);
+      const isForest = false;
+      const taihu = MAP_DEFINITION.regions.find(item => item.name === '太湖');
+      const lakeCenterX = (taihu?.x || 0.58) * WORLD_HALF_X;
+      const lakeCenterZ = (taihu?.z || -0.22) * WORLD_HALF_Z;
+      const lakeRadius = Math.min(WORLD_HALF_X, WORLD_HALF_Z) * 0.12;
+      const lakeDist = Math.abs(x - lakeCenterX) + Math.abs(z - lakeCenterZ);
+      const lake = region === '太湖' && lakeDist < lakeRadius;
+      const lakeRing = region === '太湖' && !lake && lakeDist < lakeRadius * 1.22;
+      const exposedRock = region === '雁门关' || region === '大巴山';
+      const treeChance = false;
+      return { surface, isForest, lake, lakeRing, exposedRock, treeChance, region };
+    }
+
+    function ensureWorldAroundPlayer(force=false) {
+      return;
+    }
+
+    function generateColumn(x, z) {
+      if (x < -WORLD_HALF_X || x > WORLD_HALF_X || z < -WORLD_HALF_Z || z > WORLD_HALF_Z) return;
+      const colKey = columnKey(x, z);
+      if (generatedColumns.has(colKey)) return;
+
+      const profile = getTerrainProfile(x, z);
+      const surface = profile.surface;
+
+      addBlock(x, surface, z, 'grass', sharedGeo.cube);
+      addBlock(x, surface - 1, z, 'dirt', sharedGeo.cube);
+      addBlock(x, surface - 2, z, 'dirt', sharedGeo.cube);
+      addBlock(x, surface - 3, z, 'dirt', sharedGeo.cube);
+      addBlock(x, surface - 4, z, 'stone', sharedGeo.cube);
+      addBlock(x, surface - 5, z, 'stone', sharedGeo.cube);
+      addBlock(x, surface - 6, z, 'obsidian', sharedGeo.cube);
+      addBlock(x, surface - 7, z, 'gold_ore', sharedGeo.cube);
+      addBlock(x, surface - 8, z, 'diamond_ore', sharedGeo.cube);
+      addBlock(x, surface - 9, z, 'bedrock', sharedGeo.cube);
+
+      if (profile.lake) {
+        removeBlock(x, surface, z, { settle: false });
+        addWater(x, surface - 0.35, z, sharedGeo.water);
+      } else if (profile.lakeRing) {
+        removeBlock(x, surface, z, { settle: false });
+        addBlock(x, surface, z, 'sand', sharedGeo.cube);
+      }
+
+      if (profile.exposedRock) {
+        removeBlock(x, surface, z, { settle: false });
+        addBlock(x, surface, z, 'stone', sharedGeo.cube);
+        addBlock(x, surface + 1, z, pseudoNoise2D(x, z, 37) < 0.7 ? 'stone' : 'coal', sharedGeo.cube);
+      }
+
+      generatedColumns.add(colKey);
+
+      const keepSpawnOpen = true;
+      if (profile.treeChance && !profile.lake && !profile.lakeRing && !keepSpawnOpen) {
+        plantTree(x, z, surface);
+      }
+    }
+
+    function keyOf(x,y,z) { return `${x},${y},${z}`; }
+
+    function forEachSolidGridBlock(minX, maxX, minY, maxY, minZ, maxZ, callback) {
+      const startX = Math.ceil(minX - 0.5);
+      const endX = Math.floor(maxX + 0.5);
+      const startY = Math.ceil(minY - 0.5);
+      const endY = Math.floor(maxY + 0.5);
+      const startZ = Math.ceil(minZ - 0.5);
+      const endZ = Math.floor(maxZ + 0.5);
+
+      for (let x = startX; x <= endX; x++) {
+        for (let y = startY; y <= endY; y++) {
+          for (let z = startZ; z <= endZ; z++) {
+            const block = grid.get(keyOf(x, y, z));
+            if (!block || !block.userData || !block.userData.solid) continue;
+            if (callback(block, x, y, z) === true) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function resolvePlacedBlock(object) {
+      let current = object;
+      while (current) {
+        if (current.userData && current.userData.isBlock) return current;
+        current = current.parent;
+      }
+      return null;
+    }
+
+    function addBlock(x, y, z, type, geo) {
+      const k = keyOf(x,y,z);
+      if (grid.has(k)) return;
+      const mesh = new THREE.Mesh(geo || sharedGeo.cube, materials[type] || materials.dirt);
+      mesh.position.set(x, y, z);
+      mesh.userData = { type, solid: true, isBlock: true };
+      worldGroup.add(mesh);
+      grid.set(k, mesh);
+      colliders.push(mesh);
+      return mesh;
+    }
+
+    function addWater(x, y, z, geo) {
+      const mesh = new THREE.Mesh(geo, materials.water);
+      mesh.position.set(x, y, z);
+      mesh.userData = { type: 'water', solid: false, isWater: true, noHit: true };
+      decoGroup.add(mesh);
+    }
+
+    function removeBlock(x, y, z, options={}) {
+      const k = keyOf(x,y,z);
+      const mesh = grid.get(k);
+      if (!mesh) return false;
+      worldGroup.remove(mesh);
+      grid.delete(k);
+      const i = colliders.indexOf(mesh);
+      if (i >= 0) colliders.splice(i,1);
+      if (options.settle !== false) {
+        settleBlocksNear(x, y, z);
+      }
+      return true;
+    }
+
+    function isGravityBlockType(type) {
+      return !['bedrock', 'leaves'].includes(type);
+    }
+
+    function moveBlockTo(mesh, fromX, fromY, fromZ, toX, toY, toZ) {
+      grid.delete(keyOf(fromX, fromY, fromZ));
+      mesh.position.set(toX, toY, toZ);
+      grid.set(keyOf(toX, toY, toZ), mesh);
+    }
+
+    function settleColumn(x, z, startY) {
+      for (let y = startY; y <= WORLD_SURFACE_TOP; y++) {
+        const mesh = grid.get(keyOf(x, y, z));
+        if (!mesh || !mesh.userData || !mesh.userData.solid) continue;
+        if (!isGravityBlockType(mesh.userData.type)) continue;
+
+        let targetY = y;
+        while (targetY - 1 >= WORLD_SURFACE_BOTTOM && !grid.has(keyOf(x, targetY - 1, z))) {
+          targetY--;
+        }
+
+        if (targetY !== y) {
+          moveBlockTo(mesh, x, y, z, x, targetY, z);
+        }
+      }
+    }
+
+    function settleBlocksNear(x, y, z) {
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = -2; dz <= 2; dz++) {
+          settleColumn(x + dx, z + dz, y + 1);
+        }
+      }
+    }
+
+    function plantTree(x, z, baseSurfaceY = null) {
+      const surfaceY = baseSurfaceY == null ? getTerrainProfile(x, z).surface : baseSurfaceY;
+      if (surfaceY == null) return;
+      if (surfaceY < 0) return;
+      const groundBlock = grid.get(keyOf(x, surfaceY, z));
+      if (!groundBlock || !groundBlock.userData) return;
+      if (groundBlock.userData.type !== 'grass' && groundBlock.userData.type !== 'dirt') return;
+
+      for (let y = surfaceY + 1; y <= surfaceY + 5; y++) {
+        if (grid.has(keyOf(x, y, z))) return;
+      }
+
+      const trunkH = 3 + Math.floor(pseudoNoise2D(x, z, 41) * 2);
+      for (let i = 1; i <= trunkH; i++) addBlock(x, surfaceY + i, z, 'wood');
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = -2; dz <= 2; dz++) {
+          for (let dy = trunkH - 1; dy <= trunkH + 1; dy++) {
+            const dist = Math.abs(dx) + Math.abs(dz) + Math.abs(dy - trunkH);
+            if (dist <= 3 && !(dx === 0 && dz === 0 && dy <= trunkH)) {
+              const k = keyOf(x+dx, surfaceY+dy, z+dz);
+              if (!grid.has(k)) {
+                const m = new THREE.Mesh(sharedGeo.leaves, materials.leaves);
+                m.position.set(x+dx, surfaceY+dy, z+dz);
+                m.userData = { type: 'leaves', solid: true, isBlock: true };
+                worldGroup.add(m);
+                grid.set(k, m);
+                colliders.push(m);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function findSurfaceY(x, z) {
+      if (x < -WORLD_HALF_X || x > WORLD_HALF_X || z < -WORLD_HALF_Z || z > WORLD_HALF_Z) return null;
+      return 0;
+    }
+
+    // Player state and HUD
+    function resetPlayer() {
+      player.pos.set(0, 2.2, 14);
+      player.vel.set(0,0,0);
+      player.yaw = 0;
+      player.pitch = -0.08;
+      player.health = 100;
+      player.onGround = false;
+      player.hurtCooldown = 0;
+      player.attackCooldown = 0;
+      player.skillCooldown = 0;
+      player.weaponIndex = 0;
+      player.skillIndex = 0;
+      dead = false;
+      deadEl.style.display = 'none';
+      updateHUD();
+    }
+
+    function getCurrentWeapon() {
+      return classLoadouts[player.role].weapons[player.weaponIndex] || classLoadouts[player.role].weapons[0];
+    }
+
+    function getCurrentSkill() {
+      const available = getUnlockedSkills();
+      return available[player.skillIndex] || available[0] || skillBook[0];
+    }
+
+    function getUnlockedSkills() {
+      return skillBook.filter(skill => skill.unlocked);
+    }
+
+    function unlockSkill(skillId, source='领悟') {
+      const skill = skillBook.find(item => item.id === skillId);
+      if (!skill || skill.unlocked) return false;
+      skill.unlocked = true;
+      player.skillIndex = getUnlockedSkills().findIndex(item => item.id === skillId);
+      setMessage(`${source}：学会了${skill.label}`, 1.8);
+      updateHotbar();
+      updateHUD();
+      return true;
+    }
+
+    function setPlayerRole(role) {
+      player.role = role;
+      player.weaponIndex = 0;
+      player.skillIndex = 0;
+      player.skillCooldown = 0;
+      buildPlayerAvatar();
+      updateHUD();
+    }
+
+    function switchWeapon() {
+      const weapons = classLoadouts[player.role].weapons;
+      player.weaponIndex = (player.weaponIndex + 1) % weapons.length;
+      refreshPlayerWeapon();
+      setMessage(`切换武器：${getCurrentWeapon().label}`, 0.8);
+      updateHUD();
+    }
+
+    function selectSkill(index) {
+      if (index < 0 || index >= getUnlockedSkills().length) return;
+      player.skillIndex = index;
+      setMessage(`当前技能：${getCurrentSkill().label}`, 0.8);
+      updateHUD();
+    }
+
+    function buildPlayerAvatar() {
+      if (!playerGroup) return;
+      playerGroup.clear();
+      playerGroup.visible = false;
+
+      const sprite = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.4, 3.4),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, alphaTest: 0.2, side: THREE.DoubleSide })
+      );
+      sprite.position.set(0, 1.3, 0);
+
+      playerGroup.add(sprite);
+      playerRender.sprite = sprite;
+      playerRender.body = null;
+      playerRender.head = null;
+      playerRender.leftArm = null;
+      playerRender.rightArm = null;
+      playerRender.weapon = null;
+      refreshPlayerWeapon();
+    }
+
+    function refreshPlayerWeapon() {
+      if (!playerRender.sprite) return;
+      const weapon = getCurrentWeapon();
+      const config = weaponSpriteConfig[weapon.id];
+      if (!config) return;
+      if (!weaponSpriteMaterials[weapon.id]) {
+        try {
+          const texture = new THREE.TextureLoader().load(config.src);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          weaponSpriteMaterials[weapon.id] = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            alphaTest: 0.35,
+            side: THREE.DoubleSide
+          });
+        } catch (err) {
+          console.warn(`weapon texture load failed for ${weapon.id}:`, err);
+          weaponSpriteMaterials[weapon.id] = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        }
+      }
+      playerRender.sprite.material = weaponSpriteMaterials[weapon.id];
+      playerRender.sprite.geometry = new THREE.PlaneGeometry(2.4, 3.4);
+      applyWeaponPose(config.idle);
+    }
+
+    function applyWeaponPose(pose) {
+      if (!playerRender.sprite || !pose) return;
+      playerRender.sprite.position.set(pose.px * 0.35, 1.3 + (pose.py - 1.0) * 0.18, pose.pz * 0.18);
+      playerRender.sprite.rotation.set(pose.rx || 0, 0, pose.rz || 0);
+    }
+
+    function updatePlayerAvatar(dt) {
+      if (!playerGroup) return;
+      player.attackAnim = Math.max(0, player.attackAnim - dt);
+      playerGroup.position.set(player.pos.x, player.pos.y - player.height, player.pos.z);
+      playerGroup.rotation.y = player.yaw + Math.PI;
+      const weapon = getCurrentWeapon();
+      const config = weaponSpriteConfig[weapon.id];
+      const attackDuration = weapon.kind === 'ranged' ? 0.32 : 0.24;
+
+      if (player.attackAnim > 0 && playerRender.sprite) {
+        const t = 1 - player.attackAnim / attackDuration;
+        const swing = Math.sin(t * Math.PI);
+        if (config) {
+          const idle = config.idle;
+          const attack = config.attack;
+          applyWeaponPose({
+            px: idle.px + (attack.px - idle.px) * swing,
+            py: idle.py + (attack.py - idle.py) * swing,
+            pz: idle.pz + (attack.pz - idle.pz) * swing,
+            rx: idle.rx + (attack.rx - idle.rx) * swing,
+            rz: idle.rz + (attack.rz - idle.rz) * swing
+          });
+        }
+      } else if (playerRender.sprite) {
+        applyWeaponPose(config ? config.idle : null);
+      }
+    }
+
+    function updateSkillStudy(dt) {
+      if (!keys['g'] || dead || !gameStarted) {
+        if (player.studyProgress > 0) player.studyProgress = Math.max(0, player.studyProgress - dt * 1.8);
+        return;
+      }
+
+      const learnable = getLearnableSkillHere();
+      if (!learnable) {
+        player.studyProgress = 0;
+        setMessage('附近没有可偷师或领悟的金色光圈', 0.7);
+        return;
+      }
+
+      player.studyProgress += dt;
+      if (player.studyProgress < 2.2) {
+        setMessage(`观察金色光圈：${learnable.label} ${(player.studyProgress / 2.2 * 100).toFixed(0)}%`, 0.35);
+        return;
+      }
+
+      player.studyProgress = 0;
+      unlockSkill(learnable.skillId, learnable.method);
+    }
+
+    function getLearnableSkillHere() {
+      const area = getCurrentMonsterArea();
+      const region = getZoneText();
+      const candidates = [
+        { skillId: 'yaowuxing', label: '杳无形', method: '偷师学艺', match: () => area && area.kind === '地窟副本' },
+        { skillId: 'qingshan_zhibi', label: '青山执笔', method: '偷师学艺', match: () => area && area.name === '天工地窟' },
+        { skillId: 'suanjing_shishu', label: '算经十书', method: '偷师学艺', match: () => area && area.name === '悬河之墟地窟' },
+        { skillId: 'jiuqu_qiang', label: '九曲惊神枪', method: '偷师学艺', match: () => area && area.name === '枯木隘' },
+        { skillId: 'lingyun_ta', label: '凌云踏', method: '探索领悟', match: () => region === '大巴山' || region === '雁门关' },
+        { skillId: 'shexing_nayue', label: '摄星拿月', method: '探索领悟', match: () => region === '太湖' || region === '杭州城' },
+        { skillId: 'xiaoyin_qianlang', label: '箫吟千浪', method: '侠迹领悟', match: () => region === '开封城' && inventory.changming_yu >= 300 }
+      ];
+      return candidates.find(item => {
+        const skill = skillBook.find(s => s.id === item.skillId);
+        return skill && !skill.unlocked && item.match();
+      }) || null;
+    }
+
+    function resetInventory() {
+      Object.keys(initialInventory).forEach(key => {
+        inventory[key] = initialInventory[key];
+      });
+      selectedIndex = 0;
+    }
+
+    function getBestPickaxe() {
+      for (let i = pickaxeTiers.length - 1; i >= 0; i--) {
+        const tool = pickaxeTiers[i];
+        if ((inventory[tool.id] || 0) > 0) return tool;
+      }
+      return null;
+    }
+
+    function getBestMeleeWeapon() {
+      for (let i = meleeWeapons.length - 1; i >= 0; i--) {
+        const weapon = meleeWeapons[i];
+        if ((inventory[weapon.id] || 0) > 0) return weapon;
+      }
+      return null;
+    }
+
+    function getSelectedHotbarItem() {
+      return hotbar[selectedIndex] || null;
+    }
+
+    function getSelectedPickaxe() {
+      const selected = getSelectedHotbarItem();
+      if (!selected || selected.kind !== 'tool') return null;
+      return pickaxeTiers.find(tool => tool.id === selected.id && (inventory[tool.id] || 0) > 0) || null;
+    }
+
+    function getSelectedMeleeWeapon() {
+      const selected = getSelectedHotbarItem();
+      if (!selected || selected.kind !== 'weapon') return null;
+      return meleeWeapons.find(weapon => weapon.id === selected.id && (inventory[weapon.id] || 0) > 0) || null;
+    }
+
+    function getSelectedBowWeapon() {
+      const selected = getSelectedHotbarItem();
+      if (!selected || selected.kind !== 'weapon') return null;
+      return bowWeapons.find(weapon => weapon.id === selected.id && (inventory[weapon.id] || 0) > 0) || null;
+    }
+
+    function getBowArrowColor(bowId) {
+      if (bowId === 'wood_bow') return 0x8b5a2b;
+      if (bowId === 'stone_bow') return 0xa7afb7;
+      if (bowId === 'gold_bow') return 0xf2cf45;
+      if (bowId === 'obsidian_bow') return 0x6f49b8;
+      if (bowId === 'diamond_bow') return 0x61ecf4;
+      return 0x5b402c;
+    }
+
+    function hasSelectedBow() {
+      return !!getSelectedBowWeapon();
+    }
+
+    function getPickaxeTier() {
+      return getSelectedPickaxe()?.tier || 0;
+    }
+
+    function getPickaxeLabel() {
+      return getSelectedPickaxe()?.label || '未装备';
+    }
+
+    function getAttackDamage() {
+      const meleeDamage = getSelectedMeleeWeapon()?.damage || 0;
+      const toolDamage = getSelectedPickaxe()?.damage || 0;
+      return Math.max(meleeDamage, toolDamage, 8);
+    }
+
+    function getCombatLabel() {
+      const selected = getSelectedHotbarItem();
+      if (!selected) return '徒手';
+      const selectedBow = getSelectedBowWeapon();
+      if (selectedBow) return selectedBow.label;
+      if (selected.kind === 'weapon') return getSelectedMeleeWeapon()?.label || '未装备武器';
+      if (selected.kind === 'tool') return getSelectedPickaxe()?.label || '未装备工具';
+      return selected.label;
+    }
+
+    function canCraft(id) {
+      if (id === 'planks') return inventory.wood >= 1;
+      if (id === 'wood_pickaxe') return inventory.planks >= 3 && inventory.wood >= 2;
+      if (id === 'stone_pickaxe') return inventory.stone >= 3 && inventory.planks >= 2;
+      if (id === 'iron_pickaxe') return inventory.iron_ore >= 3 && inventory.planks >= 2;
+      if (id === 'gold_pickaxe') return inventory.gold_ore >= 3 && inventory.planks >= 2;
+      if (id === 'diamond_pickaxe') return inventory.diamond_ore >= 3 && inventory.wood >= 2;
+      if (id === 'wood_sword') return inventory.wood >= 2;
+      if (id === 'diamond_sword') return inventory.diamond_ore >= 2;
+      if (id === 'wood_bow') return inventory.wood >= 3;
+      if (id === 'stone_bow') return inventory.stone >= 3 && inventory.wood >= 2;
+      if (id === 'gold_bow') return inventory.gold_ore >= 3 && inventory.wood >= 2;
+      if (id === 'obsidian_bow') return inventory.obsidian >= 3 && inventory.wood >= 2;
+      if (id === 'diamond_bow') return inventory.diamond_ore >= 3 && inventory.wood >= 2;
+      if (id === 'torch') return inventory.planks >= 1 && inventory.coal >= 1;
+      if (id === 'stone_bricks') return inventory.stone >= 2;
+      if (id === 'wood_door') return inventory.planks >= 3 && inventory.wood >= 1;
+      if (id === 'wood_window') return inventory.planks >= 2 && inventory.wood >= 1;
+      if (id === 'bed') return inventory.wool >= 3 && inventory.planks >= 3;
+      if (id === 'wood_house') return inventory.planks >= 50;
+      if (id === 'stone_house') return inventory.stone >= 50;
+      if (id === 'obsidian_house') return inventory.obsidian >= 50;
+      if (id === 'gold_house') return inventory.gold_ore >= 50;
+      if (id === 'diamond_house') return inventory.diamond_ore >= 50;
+      return false;
+    }
+
+    function refreshCraftButtons() {
+      [...document.querySelectorAll('[data-craft]')].forEach(btn => {
+        btn.disabled = !canCraft(btn.dataset.craft);
+      });
+    }
+
+    function restartGame() {
+      try {
+        document.exitPointerLock?.();
+      } catch (err) {
+        console.warn('exitPointerLock failed during restart:', err);
+      }
+      timeOfDay = 0.22;
+      spawnTimer = 0;
+      resetInventory();
+      resetPlayer();
+      if (generatedColumns.size === 0) {
+        createWorld();
+      } else {
+        clearDynamicWorldEntities();
+        buildPlayerAvatar();
+      }
+      updateHotbar();
+      refreshCraftButtons();
+      setMessage('已重开。白天会出生在草原区域。', 3);
+    }
+
+    function updateHUD() {
+      healthFill.style.width = `${Math.max(0, player.health)}%`;
+      timeFill.style.width = `${(timeOfDay % 1) * 100}%`;
+
+      const phase = getDayPhase();
+      const zone = getZoneText();
+      const dangerArea = getCurrentMonsterArea();
+      phaseText.textContent = phase.label;
+      zoneText.textContent = dangerArea ? `${zone}｜${dangerArea.kind}：${dangerArea.name}` : zone;
+
+      coordText.textContent = `位置：${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)}, ${player.pos.z.toFixed(1)}`;
+      const weapon = getCurrentWeapon();
+      const skill = getCurrentSkill();
+      const region = MAP_DEFINITION.regions.find(item => item.name === zone);
+      const regionInfo = region?.areaKm2 ? `｜约${region.areaKm2}km²` : '';
+      oreText.textContent = `职业：${classLoadouts[player.role].label}｜武器：${weapon.label}｜${MAP_DEFINITION.fullWalkHours}全图`;
+      dropText.textContent = `技能：${skill.label}｜G偷师/领悟｜长鸣玉：${inventory.changming_yu}${regionInfo}`;
+    }
+
+    function getDayPhase() {
+      const t = timeOfDay % 1;
+      if (t < 0.12) return { key: 'dawn', label: '黎明' };
+      if (t < 0.62) return { key: 'day', label: '白天' };
+      if (t < 0.72) return { key: 'dusk', label: '黄昏' };
+      if (t < 0.92) return { key: 'night', label: '夜晚' };
+      return { key: 'preDawn', label: '凌晨' };
+    }
+
+    function getZoneText() {
+      return getRegionAt(Math.round(player.pos.x), Math.round(player.pos.z));
+    }
+
+    function getCurrentMonsterArea() {
+      return MONSTER_DEFINITION.spawnAreas.find(area => {
+        const centerX = area.x * WORLD_HALF_X;
+        const centerZ = area.z * WORLD_HALF_Z;
+        const dx = player.pos.x - centerX;
+        const dz = player.pos.z - centerZ;
+        return Math.sqrt(dx * dx + dz * dz) <= area.radius;
+      }) || null;
+    }
+
+    function updateDayNight(dt) {
+      // weighted phases: day longer, night shorter
+      const phase = getDayPhase();
+      const speedMult = phase.key === 'day' ? 0.6 : phase.key === 'night' ? 1.4 : 1.0;
+      timeOfDay = (timeOfDay + dt * daySpeed * speedMult) % 1;
+      const t = timeOfDay;
+
+      const sky = new THREE.Color();
+      const fog = new THREE.Color();
+      let ambient = 1.15;
+      let sun = 0.8;
+
+      if (t < 0.12) {
+        const k = t / 0.12;
+        sky.lerpColors(new THREE.Color(0x9f8fd1), new THREE.Color(0x8fd0ff), k);
+        fog.lerpColors(new THREE.Color(0x9c9dc5), new THREE.Color(0x8fd0ff), k);
+        ambient = 0.85 + 0.25 * k;
+        sun = 0.45 + 0.25 * k;
+      } else if (t < 0.62) {
+        sky.set(0x8fd0ff);
+        fog.set(0x8fd0ff);
+        ambient = 1.12;
+        sun = 0.82;
+      } else if (t < 0.72) {
+        const k = (t - 0.62) / 0.10;
+        sky.lerpColors(new THREE.Color(0x8fd0ff), new THREE.Color(0xe38a5c), k);
+        fog.lerpColors(new THREE.Color(0x8fd0ff), new THREE.Color(0xc77b62), k);
+        ambient = 1.12 - 0.28 * k;
+        sun = 0.82 - 0.36 * k;
+      } else if (t < 0.92) {
+        const k = (t - 0.72) / 0.20;
+        sky.lerpColors(new THREE.Color(0x203050), new THREE.Color(0x11182b), k);
+        fog.lerpColors(new THREE.Color(0x2c3d62), new THREE.Color(0x1a2238), k);
+        ambient = 0.72 - 0.12 * k;
+        sun = 0.30 - 0.08 * k;
+      } else {
+        const k = (t - 0.92) / 0.08;
+        sky.lerpColors(new THREE.Color(0x1d2440), new THREE.Color(0x9f8fd1), k);
+        fog.lerpColors(new THREE.Color(0x22304f), new THREE.Color(0x938cb7), k);
+        ambient = 0.62 + 0.18 * k;
+        sun = 0.22 + 0.20 * k;
+      }
+
+      scene.background = sky;
+      scene.fog.color.copy(fog);
+      scene.fog.near = phase.key === 'night' ? 10 : 16;
+      scene.fog.far = phase.key === 'night' ? 140 : 240;
+      hemiLight.intensity = ambient;
+      dirLight.intensity = sun;
+      dirLight.position.set(Math.sin(t * Math.PI * 2) * 14, 12 + Math.cos(t * Math.PI * 2) * 8, 10);
+
+      updateTorchLights();
+    }
+
+    function updateTorchLights() {
+      for (const t of torches) {
+        t.light.intensity = 0.9 + Math.sin(performance.now() * 0.01 + t.mesh.position.x) * 0.08;
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (!scene || !renderer) return;
+
+      const dt = Math.min(clock.getDelta(), 0.033);
+
+      if (gameStarted && !dead) {
+        updateKeyboardLook(dt);
+        updatePlayer(dt);
+        ensureWorldAroundPlayer();
+        updateMonsters(dt);
+        updateAnimals(dt);
+        updateProjectiles(dt);
+        updateSpawning(dt);
+        updateDayNight(dt);
+        updatePlayerAvatar(dt);
+        updateSkillStudy(dt);
+        hudUpdateTimer -= dt;
+        if (hudUpdateTimer <= 0) {
+          updateHUD();
+          hudUpdateTimer = 0.12;
+        }
+      }
+
+      camera.position.copy(player.pos);
+      const lookDir = new THREE.Vector3(
+        -Math.sin(player.yaw) * Math.cos(player.pitch),
+        Math.sin(player.pitch),
+        -Math.cos(player.yaw) * Math.cos(player.pitch)
+      );
+      if (typeof camera.lookAt === 'function') {
+        camera.lookAt(player.pos.clone().add(lookDir));
+      } else {
+        camera.rotation.order = 'YXZ';
+        camera.rotation.x = player.pitch;
+        camera.rotation.y = player.yaw;
+        camera.rotation.z = 0;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function updateKeyboardLook(dt) {
+      const lookSpeed = 1.85;
+      if (keys['arrowleft'] || keys['j']) player.yaw += lookSpeed * dt;
+      if (keys['arrowright'] || keys['l']) player.yaw -= lookSpeed * dt;
+      if (keys['arrowup'] || keys['i']) player.pitch = Math.max(-1.18, player.pitch - lookSpeed * dt);
+      if (keys['arrowdown'] || keys['k']) player.pitch = Math.min(1.18, player.pitch + lookSpeed * dt);
+    }
+
+    function updatePlayer(dt) {
+      player.hurtCooldown = Math.max(0, player.hurtCooldown - dt);
+      player.attackCooldown = Math.max(0, player.attackCooldown - dt);
+      player.skillCooldown = Math.max(0, player.skillCooldown - dt);
+
+      const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0,1,0));
+
+      let move = new THREE.Vector3();
+      if (keys['w']) move.add(forward);
+      if (keys['s']) move.sub(forward);
+      if (keys['a']) move.sub(right);
+      if (keys['d']) move.add(right);
+      if (move.lengthSq() > 0) move.normalize().multiplyScalar(player.speed);
+
+      player.vel.x = move.x;
+      player.vel.z = move.z;
+      player.vel.y -= 16 * dt;
+
+      if (player.onGround && keys[' ']) {
+        player.vel.y = 7.3;
+        player.onGround = false;
+      }
+
+      const next = player.pos.clone();
+
+      next.x += player.vel.x * dt;
+      if (!collidesAt(next)) player.pos.x = next.x;
+
+      next.copy(player.pos);
+      next.z += player.vel.z * dt;
+      if (!collidesAt(next)) player.pos.z = next.z;
+
+      next.copy(player.pos);
+      next.y += player.vel.y * dt;
+      if (!collidesAt(next)) {
+        player.pos.y = next.y;
+        player.onGround = false;
+      } else {
+        if (player.vel.y < 0) player.onGround = true;
+        player.vel.y = 0;
+      }
+
+      if (player.pos.y < -8) {
+        damagePlayer(999);
+      }
+
+      player.pos.x = Math.max(-WORLD_HALF_X + 1, Math.min(WORLD_HALF_X - 1, player.pos.x));
+      player.pos.z = Math.max(-WORLD_HALF_Z + 1, Math.min(WORLD_HALF_Z - 1, player.pos.z));
+    }
+
+    function collidesAt(pos) {
+      if (pos.y - player.height <= 0.5) return true;
+
+      const px = pos.x, py = pos.y, pz = pos.z;
+      const minX = px - player.radius, maxX = px + player.radius;
+      const minY = py - player.height, maxY = py;
+      const minZ = pz - player.radius, maxZ = pz + player.radius;
+
+      if (collidesWithLandmark(minX, maxX, minY, maxY, minZ, maxZ)) return true;
+      if (grid.size === 0) return false;
+
+      return forEachSolidGridBlock(minX, maxX, minY, maxY, minZ, maxZ, (obj, ox, oy, oz) => (
+        minX < ox + 0.5 && maxX > ox - 0.5 &&
+        minY < oy + 0.5 && maxY > oy - 0.5 &&
+        minZ < oz + 0.5 && maxZ > oz - 0.5
+      ));
+    }
+
+    function collidesWithLandmark(minX, maxX, minY, maxY, minZ, maxZ) {
+      for (const obj of colliders) {
+        if (!obj.userData || !obj.userData.landmark || !obj.userData.solid) continue;
+        const box = getSimpleObjectBounds(obj);
+        if (
+          minX < box.max.x && maxX > box.min.x &&
+          minY < box.max.y && maxY > box.min.y &&
+          minZ < box.max.z && maxZ > box.min.z
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function getSimpleObjectBounds(obj) {
+      const args = obj.geometry?.parameters
+        ? [obj.geometry.parameters.width, obj.geometry.parameters.height, obj.geometry.parameters.depth]
+        : (obj.geometry?.args || [1, 1, 1]);
+      const width = args[0] || 1;
+      const height = args[1] || 1;
+      const depth = args[2] || 1;
+      const parentPos = obj.parent && obj.parent.position ? obj.parent.position : { x: 0, y: 0, z: 0 };
+      const x = obj.position.x + parentPos.x;
+      const y = obj.position.y + parentPos.y;
+      const z = obj.position.z + parentPos.z;
+      return {
+        min: { x: x - width * 0.5, y: y - height * 0.5, z: z - depth * 0.5 },
+        max: { x: x + width * 0.5, y: y + height * 0.5, z: z + depth * 0.5 }
+      };
+    }
+
+    function hasSolidBlockAt(x, y, z) {
+      const block = grid.get(keyOf(x, y, z));
+      return !!(block && block.userData && block.userData.solid);
+    }
+
+    function isPlayerSheltered() {
+      const gx = Math.round(player.pos.x);
+      const gz = Math.round(player.pos.z);
+      const wallBaseY = Math.round(player.pos.y - 1.1);
+      const roofBaseY = Math.round(player.pos.y + 0.25);
+
+      const roof =
+        hasSolidBlockAt(gx, roofBaseY, gz) ||
+        hasSolidBlockAt(gx, roofBaseY + 1, gz) ||
+        hasSolidBlockAt(gx, roofBaseY + 2, gz);
+
+      const sideOffsets = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+      ];
+      const closedSides = sideOffsets.filter(([dx, dz]) => {
+        return (
+          hasSolidBlockAt(gx + dx, wallBaseY, gz + dz) ||
+          hasSolidBlockAt(gx + dx, wallBaseY + 1, gz + dz)
+        );
+      }).length;
+
+      return roof && closedSides >= 4;
+    }
+
+    function hasBlockBetweenPoints(from, to) {
+      const dir = new THREE.Vector3().subVectors(to, from);
+      const distance = dir.length();
+      if (distance <= 0.001) return false;
+      dir.normalize();
+
+      const steps = Math.ceil(distance / 0.35);
+      for (let i = 1; i < steps; i++) {
+        const t = (i / steps) * distance;
+        if (t >= distance - 0.2) break;
+        const sampleX = Math.round(from.x + dir.x * t);
+        const sampleY = Math.round(from.y + dir.y * t);
+        const sampleZ = Math.round(from.z + dir.z * t);
+        const block = grid.get(keyOf(sampleX, sampleY, sampleZ));
+        if (block && block.userData && block.userData.solid) return true;
+      }
+      return false;
+    }
+
+    function getTargetPosition(target) {
+      return target.kind === 'monster' ? target.entity.mesh.position : target.entity.group.position;
+    }
+
+    function applyTargetHit(target, damage, push=0, stun=0) {
+      const entity = target.entity;
+      const pos = getTargetPosition(target);
+      if (damage > 0) {
+        entity.health = Math.max(0, entity.health - damage);
+      }
+      if (stun > 0) {
+        entity.stun = Math.max(entity.stun || 0, stun);
+      }
+
+      if (push !== 0) {
+        const pushDir = new THREE.Vector3().subVectors(pos, player.pos).setY(0);
+        if (pushDir.lengthSq() > 0.001) {
+          pushDir.normalize().multiplyScalar(push);
+          pos.add(pushDir);
+        }
+      }
+
+      if (target.kind === 'monster') {
+        updateMonsterHealth(entity);
+        if (entity.health <= 0) killMonster(entity);
+      } else {
+        entity.fleeTimer = Math.max(entity.fleeTimer || 0, 2.0);
+        updateAnimalHealth(entity);
+        if (entity.health <= 0) {
+          giveAnimalDrops(entity.type);
+          removeAnimal(entity);
+        }
+      }
+    }
+
+    function getFrontCombatTarget(maxDistance) {
+      raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+
+      const monsterMeshes = monsters.map(m => m.mesh);
+      const hitMonster = raycaster.intersectObjects(monsterMeshes, true)[0];
+      if (hitMonster && hitMonster.distance <= maxDistance) {
+        const monster = monsters.find(m => m.mesh === hitMonster.object || m.mesh.children.includes(hitMonster.object) || hitMonster.object.parent === m.mesh);
+        if (monster) return { kind: 'monster', entity: monster, distance: hitMonster.distance };
+      }
+
+      const animalMeshes = animals.map(a => a.group);
+      const hitAnimal = raycaster.intersectObjects(animalMeshes, true)[0];
+      if (hitAnimal && hitAnimal.distance <= maxDistance) {
+        const animal = animals.find(a => a.group === hitAnimal.object || a.group.children.includes(hitAnimal.object) || hitAnimal.object.parent === a.group);
+        if (animal) return { kind: 'animal', entity: animal, distance: hitAnimal.distance };
+      }
+      return null;
+    }
+
+    function getNearestCombatTarget(maxDistance) {
+      let best = null;
+      for (const m of monsters) {
+        const d = m.mesh.position.distanceTo(player.pos);
+        if (d <= maxDistance && (!best || d < best.distance)) best = { kind: 'monster', entity: m, distance: d };
+      }
+      for (const a of animals) {
+        if (a.dead) continue;
+        const d = a.group.position.distanceTo(player.pos);
+        if (d <= maxDistance && (!best || d < best.distance)) best = { kind: 'animal', entity: a, distance: d };
+      }
+      return best;
+    }
+
+    function resolveMonsterFromHitObject(object) {
+      return monsters.find((monster) => {
+        let current = object;
+        while (current) {
+          if (current === monster.mesh) return true;
+          current = current.parent;
+        }
+        return false;
+      });
+    }
+
+    function firePlayerRangedWeapon(weapon) {
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+
+      const arrowColor = weapon.id === 'crossbow' ? 0xd0d6de : 0xb57a45;
+      const arrowMaterial = new THREE.MeshLambertMaterial({ color: arrowColor });
+      const arrow = new THREE.Mesh(sharedGeo.arrow, arrowMaterial);
+      arrow.position.copy(player.pos).add(new THREE.Vector3(0, -0.45, 0)).add(dir.clone().multiplyScalar(0.9));
+      arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir.clone().normalize());
+      projectileGroup.add(arrow);
+      projectiles.push({
+        mesh: arrow,
+        vel: dir.multiplyScalar(weapon.speed),
+        life: 2.4,
+        owner: 'player',
+        damage: weapon.damage
+      });
+    }
+
+    function doLightAttack() {
+      if (player.attackCooldown > 0) return;
+      const weapon = getCurrentWeapon();
+      player.attackCooldown = weapon.cooldown;
+      player.attackAnim = weapon.kind === 'ranged' ? 0.32 : 0.24;
+
+      if (weapon.kind === 'ranged') {
+        firePlayerRangedWeapon(weapon);
+        return;
+      }
+
+      const target = getFrontCombatTarget(weapon.range);
+      if (target) {
+        applyTargetHit(target, weapon.damage, weapon.push, 0);
+      }
+    }
+
+    function castCurrentSkill() {
+      if (player.skillCooldown > 0) {
+        setMessage(`${getCurrentSkill().label}冷却中`, 0.8);
+        return;
+      }
+
+      const skill = getCurrentSkill();
+      if (skill.id === 'taiji') {
+        const target = getNearestCombatTarget(3.3);
+        if (!target) {
+          return;
+        }
+        applyTargetHit(target, 10, 4.8, 1.5);
+      } else if (skill.id === 'jinyu') {
+        const target = getFrontCombatTarget(10);
+        if (!target) {
+          return;
+        }
+        applyTargetHit(target, 6, 0.8, 2.2);
+      } else if (skill.id === 'lingxu') {
+        const target = getNearestCombatTarget(8.5);
+        if (!target) {
+          return;
+        }
+        const pos = getTargetPosition(target);
+        const offset = new THREE.Vector3().subVectors(player.pos, pos).setY(0);
+        if (offset.lengthSq() < 0.001) offset.set(0, 0, 1);
+        offset.normalize();
+        player.pos.copy(pos.clone().add(offset.multiplyScalar(1.2)).add(new THREE.Vector3(0, 1.0, 0)));
+        applyTargetHit(target, 18, 1.4, 1.2);
+      } else if (skill.id === 'yaowuxing') {
+        player.hurtCooldown = Math.max(player.hurtCooldown, 3.0);
+        setMessage('杳无形：短暂隐身，敌人难以命中你', 1.2);
+      } else if (skill.id === 'lingyun_ta') {
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        dir.y = 0;
+        if (dir.lengthSq() > 0.001) {
+          dir.normalize();
+          player.pos.add(dir.multiplyScalar(7.5));
+          player.pos.x = Math.max(-WORLD_HALF_X + 1, Math.min(WORLD_HALF_X - 1, player.pos.x));
+          player.pos.z = Math.max(-WORLD_HALF_Z + 1, Math.min(WORLD_HALF_Z - 1, player.pos.z));
+        }
+      } else if (skill.id === 'shexing_nayue') {
+        const target = getFrontCombatTarget(14);
+        if (!target) return;
+        applyTargetHit(target, 8, -2.8, 1.6);
+      } else if (skill.id === 'xiaoyin_qianlang') {
+        let hit = 0;
+        for (const m of [...monsters]) {
+          const d = m.mesh.position.distanceTo(player.pos);
+          if (d <= 9) {
+            applyTargetHit({ kind: 'monster', entity: m, distance: d }, 12, 1.8, 1.8);
+            hit++;
+          }
+        }
+        if (hit === 0) return;
+      } else if (skill.id === 'qingshan_zhibi') {
+        const target = getFrontCombatTarget(16);
+        if (!target) return;
+        applyTargetHit(target, 20, 0.6, 0.7);
+      } else if (skill.id === 'jiuqu_qiang') {
+        const target = getNearestCombatTarget(5.5);
+        if (!target) return;
+        applyTargetHit(target, 28, 2.0, 0.8);
+      }
+      player.skillCooldown = skill.cooldown;
+      updateHUD();
+    }
+
+    // Combat, mining, and placement
+    function doAttackOrBreak() {
+      if (player.attackCooldown > 0) return;
+      player.attackCooldown = 0.23;
+
+      // Monster hit first
+      raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+      const monsterMeshes = monsters.map(m => m.mesh);
+      const hitMonster = raycaster.intersectObjects(monsterMeshes, true)[0];
+      if (hitMonster && hitMonster.distance < 3) {
+        const target = resolveMonsterFromHitObject(hitMonster.object);
+        if (target) {
+          const dmg = getAttackDamage();
+          target.health -= dmg;
+          updateMonsterHealth(target);
+          if (target.type === 'creeper' && target.state !== 'fuse') {
+            target.state = 'fuse';
+            target.fuse = 1.4;
+            setMessage('苦力怕开始蓄力！', 1.2);
+          }
+          if (target.health <= 0) killMonster(target);
+          return;
+        }
+      }
+
+      // Then animals
+      const animalMeshes = animals.map(a => a.group);
+      const hitAnimal = raycaster.intersectObjects(animalMeshes, true)[0];
+      if (hitAnimal && hitAnimal.distance < 3) {
+        let targetAnimal = null;
+        for (const a of animals) {
+          if (a.group === hitAnimal.object || a.group.children.includes(hitAnimal.object) || hitAnimal.object.parent === a.group) {
+            targetAnimal = a;
+            break;
+          }
+        }
+        if (targetAnimal) {
+          targetAnimal.health -= Math.max(10, getAttackDamage() - 2);
+          targetAnimal.fleeTimer = 2.6;
+          updateAnimalHealth(targetAnimal);
+          if (targetAnimal.health <= 0) {
+            giveAnimalDrops(targetAnimal.type);
+            removeAnimal(targetAnimal);
+          } else {
+            setMessage(targetAnimal.type === 'sheep' ? '打到了羊' : targetAnimal.type === 'cow' ? '打到了牛' : '打到了猪', 0.8);
+          }
+          return;
+        }
+      }
+
+      // Then block break
+      const blockMeshes = [...grid.values()].filter(m => m.userData.isBlock);
+      const hit = raycaster.intersectObjects(blockMeshes, true)[0];
+      if (!hit) return;
+      if (hit.distance > 5.2) return;
+
+      const block = resolvePlacedBlock(hit.object);
+      if (!block) return;
+      const distToPlayer = block.position.distanceTo(player.pos);
+      if (distToPlayer < 1.65) return;
+
+      const type = block.userData.type;
+      if (type === 'wood_door') {
+        toggleDoor(block);
+        return;
+      }
+      if (type === 'wood_window') {
+        toggleWindow(block);
+        return;
+      }
+      if (type === 'bed') {
+        sleepInBed();
+        return;
+      }
+      if (type === 'bedrock') {
+        setMessage('基岩无法破坏', 1.1);
+        return;
+      }
+      setMessage('这版不能挖地，专注探索与战斗', 0.9);
+    }
+
+    function placeSelectedBlock() {
+      const item = getSelectedHotbarItem();
+      if (!item) return;
+      if (item.kind === 'consumable') {
+        consumeSelectedItem();
+        return;
+      }
+      if (item.kind !== 'block') {
+        setMessage('当前选中的不是可放置方块', 1);
+        return;
+      }
+      const id = item.id;
+      if ((inventory[id] || 0) <= 0) return;
+
+      raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+      const blockMeshes = [...grid.values()].filter(m => m.userData.isBlock);
+      const hit = raycaster.intersectObjects(blockMeshes, true)[0];
+      if (!hit || hit.distance > 6) return;
+
+      const baseBlock = resolvePlacedBlock(hit.object);
+      if (!baseBlock || !hit.face) return;
+      const n = hit.face.normal.clone().round();
+      const pos = baseBlock.position.clone().add(n);
+      const x = Math.round(pos.x), y = Math.round(pos.y), z = Math.round(pos.z);
+      if (grid.has(keyOf(x,y,z))) return;
+
+      // avoid placing inside player
+      const testPos = player.pos.clone();
+      const bx = x, by = y, bz = z;
+      const overlap =
+        Math.abs(testPos.x - bx) < 0.85 &&
+        testPos.y - player.height < by + 0.5 &&
+        testPos.y > by - 0.5 &&
+        Math.abs(testPos.z - bz) < 0.85;
+      if (overlap) return;
+
+      if (id === 'torch') {
+        placeTorch(x, y, z);
+      } else if (id === 'wood_door') {
+        placeWoodDoor(x, y, z);
+      } else if (id === 'wood_window') {
+        placeWoodWindow(x, y, z);
+      } else if (id === 'bed') {
+        placeBed(x, y, z);
+      } else if (id === 'wood_house' || id === 'stone_house' || id === 'obsidian_house' || id === 'gold_house' || id === 'diamond_house') {
+        if (!placeHouseShell(x, y, z, id)) return;
+      } else {
+        addBlock(x, y, z, id);
+      }
+      inventory[id]--;
+      updateHotbar();
+    }
+
+    function placeTorch(x, y, z, lightColor=0xffc96c) {
+      const mesh = new THREE.Mesh(sharedGeo.torch, materials.torch);
+      mesh.position.set(x, y - 0.1, z);
+      mesh.userData = { type: 'torch', solid: false, noHit: true };
+      decoGroup.add(mesh);
+
+      const flame = new THREE.PointLight(lightColor, 1.0, 8, 1.8);
+      flame.position.set(x, y + 0.45, z);
+      worldFxGroup.add(flame);
+
+      torches.push({ mesh, light: flame, baseColor: lightColor });
+    }
+
+    function placeWoodDoor(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      const baseRotation = Math.abs(Math.sin(player.yaw)) > Math.abs(Math.cos(player.yaw)) ? 0 : Math.PI * 0.5;
+      group.rotation.y = baseRotation;
+
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2, 1.2), materials.wood_door);
+      panel.position.set(0, 0.5, 0);
+      group.add(panel);
+
+      const topBeam = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 1.2), materials.wood_door);
+      topBeam.position.set(0, 1.42, 0);
+      group.add(topBeam);
+
+      const midBeam = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.96), materials.wood);
+      midBeam.position.set(0, 0.45, 0);
+      group.add(midBeam);
+
+      group.userData = { type: 'wood_door', solid: true, isBlock: true, open: false, baseRotation };
+      worldGroup.add(group);
+      grid.set(keyOf(x, y, z), group);
+      colliders.push(group);
+    }
+
+    function placeWoodWindow(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      const baseRotation = Math.abs(Math.sin(player.yaw)) > Math.abs(Math.cos(player.yaw)) ? Math.PI * 0.5 : 0;
+      group.rotation.y = baseRotation;
+
+      const makeBar = (w, h, d, px, py, pz) => {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials.wood_window);
+        bar.position.set(px, py, pz);
+        group.add(bar);
+      };
+
+      makeBar(1, 0.14, 0.22, 0, 0.43, 0);
+      makeBar(1, 0.14, 0.22, 0, -0.43, 0);
+      makeBar(0.14, 1, 0.22, -0.43, 0, 0);
+      makeBar(0.14, 1, 0.22, 0.43, 0, 0);
+      makeBar(0.12, 0.92, 0.18, 0, 0, 0);
+
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.72, 0.08), materials.window_glass);
+      glass.position.set(0, 0, 0);
+      group.add(glass);
+
+      group.userData = { type: 'wood_window', solid: true, isBlock: true, open: false, baseRotation };
+      worldGroup.add(group);
+      grid.set(keyOf(x, y, z), group);
+      colliders.push(group);
+    }
+
+    function placeBed(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = Math.abs(Math.sin(player.yaw)) > Math.abs(Math.cos(player.yaw)) ? 0 : Math.PI * 0.5;
+
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1, 0.4, 1), materials.bed);
+      base.position.set(0, -0.1, 0);
+      group.add(base);
+
+      const pillow = new THREE.Mesh(new THREE.BoxGeometry(1, 0.16, 0.32), materials.bed_pillow);
+      pillow.position.set(0, 0.18, -0.3);
+      group.add(pillow);
+
+      group.userData = { type: 'bed', solid: true, isBlock: true };
+      worldGroup.add(group);
+      grid.set(keyOf(x, y, z), group);
+      colliders.push(group);
+    }
+
+    function getFacingDir() {
+      const sinYaw = Math.sin(player.yaw);
+      const cosYaw = Math.cos(player.yaw);
+      if (Math.abs(sinYaw) > Math.abs(cosYaw)) {
+        return { x: sinYaw >= 0 ? 1 : -1, z: 0 };
+      }
+      return { x: 0, z: cosYaw >= 0 ? 1 : -1 };
+    }
+
+    function getHouseWallType(houseId) {
+      if (houseId === 'wood_house') return 'planks';
+      if (houseId === 'stone_house') return 'stone';
+      if (houseId === 'obsidian_house') return 'obsidian';
+      if (houseId === 'gold_house') return 'gold_ore';
+      if (houseId === 'diamond_house') return 'diamond_ore';
+      return 'wood';
+    }
+
+    function getHouseLabel(houseId) {
+      if (houseId === 'wood_house') return '木头屋';
+      if (houseId === 'stone_house') return '石头屋';
+      if (houseId === 'obsidian_house') return '黑曜石屋';
+      if (houseId === 'gold_house') return '金屋';
+      if (houseId === 'diamond_house') return '钻石屋';
+      return '房子';
+    }
+
+    function getHouseTorchColor(houseId) {
+      if (houseId === 'wood_house') return 0xffc96c;
+      if (houseId === 'stone_house') return 0xe8f1ff;
+      if (houseId === 'obsidian_house') return 0xa874ff;
+      if (houseId === 'gold_house') return 0xffdf4d;
+      if (houseId === 'diamond_house') return 0x6ef2ff;
+      return 0xffc96c;
+    }
+
+    function getHouseSpec(houseId) {
+      if (houseId === 'wood_house') return { halfWidth: 2, halfDepth: 2, wallHeight: 3, doorwayHalf: 0, doorwayHeight: 2, windowBandY: 2, porchDepth: 1 };
+      if (houseId === 'stone_house') return { halfWidth: 3, halfDepth: 3, wallHeight: 4, doorwayHalf: 0, doorwayHeight: 2, windowBandY: 2, porchDepth: 1 };
+      if (houseId === 'obsidian_house') return { halfWidth: 3, halfDepth: 4, wallHeight: 4, doorwayHalf: 0, doorwayHeight: 2, windowBandY: 2, porchDepth: 2 };
+      if (houseId === 'gold_house') return { halfWidth: 4, halfDepth: 4, wallHeight: 5, doorwayHalf: 0, doorwayHeight: 2, windowBandY: 3, porchDepth: 2 };
+      if (houseId === 'diamond_house') return { halfWidth: 5, halfDepth: 5, wallHeight: 6, doorwayHalf: 0, doorwayHeight: 2, windowBandY: 3, porchDepth: 2 };
+      return { halfWidth: 2, halfDepth: 2, wallHeight: 3, doorwayHalf: 0, doorwayHeight: 2, windowBandY: 2, porchDepth: 1 };
+    }
+
+    function getHouseEntranceDecorations(x, y, z, houseId) {
+      const forward = getFacingDir();
+      const right = { x: forward.z, z: -forward.x };
+      const spec = getHouseSpec(houseId);
+      const pillarType = getHouseWallType(houseId);
+      const frontZ = spec.halfDepth + 1;
+      const leftX = -(spec.doorwayHalf + 1);
+      const rightX = spec.doorwayHalf + 1;
+      const pillarHeight = Math.min(spec.wallHeight, 3);
+      const pillarBlocks = [];
+      const torches = [];
+
+      for (const sideX of [leftX, rightX]) {
+        for (let ly = 1; ly <= pillarHeight; ly++) {
+          pillarBlocks.push({
+            x: x + right.x * sideX + forward.x * frontZ,
+            y: y + ly,
+            z: z + right.z * sideX + forward.z * frontZ,
+            type: pillarType
+          });
+        }
+        torches.push({
+          x: x + right.x * sideX + forward.x * frontZ,
+          y: y + pillarHeight + 1,
+          z: z + right.z * sideX + forward.z * frontZ
+        });
+      }
+
+      return { pillarBlocks, torches };
+    }
+
+    function getHouseShellBlocks(x, y, z, houseId) {
+      const forward = getFacingDir();
+      const right = { x: forward.z, z: -forward.x };
+      const blocks = [];
+      const blockType = getHouseWallType(houseId);
+      const spec = getHouseSpec(houseId);
+
+      for (let lx = -spec.halfWidth; lx <= spec.halfWidth; lx++) {
+        for (let lz = -spec.halfDepth; lz <= spec.halfDepth; lz++) {
+          blocks.push({ x: x + right.x * lx + forward.x * lz, y, z: z + right.z * lx + forward.z * lz, type: blockType });
+        }
+      }
+
+      for (let step = 1; step <= spec.porchDepth; step++) {
+        for (let lx = -spec.doorwayHalf - 1; lx <= spec.doorwayHalf + 1; lx++) {
+          const lz = spec.halfDepth + step;
+          blocks.push({
+            x: x + right.x * lx + forward.x * lz,
+            y,
+            z: z + right.z * lx + forward.z * lz,
+            type: blockType
+          });
+        }
+      }
+
+      for (let ly = 1; ly <= spec.wallHeight; ly++) {
+        for (let lx = -spec.halfWidth; lx <= spec.halfWidth; lx++) {
+          for (let lz = -spec.halfDepth; lz <= spec.halfDepth; lz++) {
+            const edge = Math.abs(lx) === spec.halfWidth || Math.abs(lz) === spec.halfDepth;
+            if (!edge) continue;
+
+            const frontDoorway = lz === spec.halfDepth && Math.abs(lx) <= spec.doorwayHalf && ly <= spec.doorwayHeight;
+            const leftWindow = lx === -spec.halfWidth && lz === 0 && ly === spec.windowBandY;
+            const rightWindow = lx === spec.halfWidth && lz === 0 && ly === spec.windowBandY;
+            if (frontDoorway || leftWindow || rightWindow) continue;
+
+            blocks.push({
+              x: x + right.x * lx + forward.x * lz,
+              y: y + ly,
+              z: z + right.z * lx + forward.z * lz,
+              type: blockType
+            });
+          }
+        }
+      }
+
+      for (let lx = -spec.halfWidth; lx <= spec.halfWidth; lx++) {
+        for (let lz = -spec.halfDepth; lz <= spec.halfDepth; lz++) {
+          blocks.push({
+            x: x + right.x * lx + forward.x * lz,
+            y: y + spec.wallHeight + 1,
+            z: z + right.z * lx + forward.z * lz,
+            type: blockType
+          });
+        }
+      }
+
+      return blocks;
+    }
+
+    function placeHouseShell(x, y, z, houseId) {
+      const blocks = getHouseShellBlocks(x, y, z, houseId);
+      const decorations = getHouseEntranceDecorations(x, y, z, houseId);
+      for (const block of blocks) {
+        if (grid.has(keyOf(block.x, block.y, block.z))) {
+          setMessage(`这里空间不够，放不下${getHouseLabel(houseId)}`, 1.2);
+          return false;
+        }
+        const overlap =
+          Math.abs(player.pos.x - block.x) < 0.85 &&
+          player.pos.y - player.height < block.y + 0.5 &&
+          player.pos.y > block.y - 0.5 &&
+          Math.abs(player.pos.z - block.z) < 0.85;
+        if (overlap) {
+          setMessage(`别把${getHouseLabel(houseId)}直接盖在自己身上`, 1.1);
+          return false;
+        }
+      }
+
+      for (const block of decorations.pillarBlocks) {
+        if (grid.has(keyOf(block.x, block.y, block.z))) {
+          setMessage(`这里空间不够，门口放不下${getHouseLabel(houseId)}的门柱`, 1.2);
+          return false;
+        }
+      }
+
+      for (const block of blocks) {
+        addBlock(block.x, block.y, block.z, block.type);
+      }
+      for (const block of decorations.pillarBlocks) {
+        addBlock(block.x, block.y, block.z, block.type);
+      }
+      const torchColor = getHouseTorchColor(houseId);
+      for (const torch of decorations.torches) {
+        placeTorch(torch.x, torch.y, torch.z, torchColor);
+      }
+      setMessage(`${getHouseLabel(houseId)}放好了，留了门洞和窗洞等你安装`, 1.5);
+      return true;
+    }
+
+    function sleepInBed() {
+      const phase = getDayPhase();
+      if (phase.key === 'day' || phase.key === 'dawn') {
+        setMessage('现在还不困，等到黄昏或夜晚再睡吧', 1.2);
+        return;
+      }
+      timeOfDay = 0.03;
+      trimMonstersTo(0);
+      setMessage('你睡了一觉，已经到黎明了', 1.5);
+      updateHUD();
+    }
+
+    function consumeSelectedItem() {
+      const item = getSelectedHotbarItem();
+      if (!item) return;
+      if (item.id === 'beef') {
+        if ((inventory.beef || 0) <= 0) {
+          setMessage('你没有牛肉', 1);
+          return;
+        }
+        if (player.health >= 100) {
+          setMessage('生命值已满', 1);
+          return;
+        }
+        inventory.beef -= 1;
+        player.health = Math.min(100, player.health + 24);
+        setMessage('吃下牛肉，恢复了生命值', 1.1);
+        updateHotbar();
+        updateHUD();
+      } else if (item.id === 'pork') {
+        if ((inventory.pork || 0) <= 0) {
+          setMessage('你没有猪肉', 1);
+          return;
+        }
+        if (player.health >= 100) {
+          setMessage('生命值已满', 1);
+          return;
+        }
+        inventory.pork -= 1;
+        player.health = Math.min(100, player.health + 20);
+        setMessage('吃下猪肉，恢复了生命值', 1.1);
+        updateHotbar();
+        updateHUD();
+      }
+    }
+
+    function toggleDoor(door) {
+      const isOpen = !door.userData.open;
+      door.userData.open = isOpen;
+      door.userData.solid = !isOpen;
+      door.rotation.y = door.userData.baseRotation + (isOpen ? Math.PI * 0.5 : 0);
+      setMessage(isOpen ? '木门打开了' : '木门关上了', 0.6);
+    }
+
+    function toggleWindow(windowBlock) {
+      const isOpen = !windowBlock.userData.open;
+      windowBlock.userData.open = isOpen;
+      windowBlock.userData.solid = !isOpen;
+      windowBlock.rotation.y = windowBlock.userData.baseRotation + (isOpen ? Math.PI * 0.5 : 0);
+      setMessage(isOpen ? '木窗打开了' : '木窗关上了', 0.6);
+    }
+
+    function firePlayerBow() {
+      if (player.attackCooldown > 0) return;
+      if (!hasSelectedBow()) {
+        const ownsAnyBow = bowWeapons.some(bow => (inventory[bow.id] || 0) > 0);
+        setMessage(ownsAnyBow ? '先在底部选中一把弓' : '你还没有弓', 1);
+        return;
+      }
+
+      const bow = getSelectedBowWeapon();
+      player.attackCooldown = bow.cooldown;
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+
+      const arrowMaterial = new THREE.MeshLambertMaterial({ color: getBowArrowColor(bow.id) });
+      const arrow = new THREE.Mesh(sharedGeo.arrow, arrowMaterial);
+      arrow.position.copy(player.pos).add(new THREE.Vector3(0, -0.55, 0)).add(dir.clone().multiplyScalar(0.9));
+      arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir.clone().normalize());
+      projectileGroup.add(arrow);
+      projectiles.push({
+        mesh: arrow,
+        vel: dir.multiplyScalar(bow.speed),
+        life: 2.4,
+        owner: 'player',
+        damage: bow.damage
+      });
+      setMessage(`${bow.label}发射！`, 0.6);
+    }
+
+    function giveAnimalDrops(type) {
+      if (type === 'sheep') {
+        inventory.wool += 1;
+        setMessage('已拾取羊毛 x1', 1.2);
+      } else if (type === 'cow') {
+        inventory.beef += 1;
+        setMessage('已拾取牛肉 x1', 1.2);
+      } else if (type === 'pig') {
+        inventory.pork += 1;
+        setMessage('已拾取猪肉 x1', 1.2);
+      }
+      updateHotbar();
+      updateHUD();
+    }
+
+
+    // Animals
+    function spawnAnimal(type) {
+      return;
+      for (let tries = 0; tries < 30; tries++) {
+        const x = Math.round(player.pos.x + (Math.random() * 34 - 17));
+        const z = Math.round(player.pos.z + (Math.random() * 34 - 17));
+        if (Math.abs(x - player.pos.x) < 4 && Math.abs(z - player.pos.z) < 4) continue;
+        const surface = findSurfaceY(x, z);
+        if (surface == null) continue;
+        const surfaceBlock = grid.get(keyOf(x, surface, z));
+        if (!surfaceBlock || (surfaceBlock.userData.type !== 'grass' && surfaceBlock.userData.type !== 'dirt')) continue;
+
+        const group = new THREE.Group();
+        group.position.set(x, surface + 0.5, z);
+
+        if (type === 'sheep') {
+          const body = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.7, 1.25), materials.sheep);
+          body.position.set(0, 0.55, 0);
+          const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.42), materials.sheepFace);
+          head.position.set(0, 0.62, 0.75);
+          group.add(body, head);
+        } else if (type === 'cow') {
+          const body = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.82, 1.45), materials.cow);
+          body.position.set(0, 0.58, 0);
+          const patch1 = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.1), materials.cowPatch);
+          patch1.position.set(0.28, 0.66, 0.74);
+          const patch2 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.22, 0.1), materials.cowPatch);
+          patch2.position.set(-0.22, 0.46, -0.74);
+          const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.45, 0.45), materials.cow);
+          head.position.set(0, 0.65, 0.92);
+          group.add(body, patch1, patch2, head);
+        } else {
+          const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 1.25), materials.pig);
+          body.position.set(0, 0.54, 0);
+          const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.4, 0.42), materials.pig);
+          head.position.set(0, 0.58, 0.82);
+          const snout = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.14), materials.pigSnout);
+          snout.position.set(0, 0.56, 1.08);
+          group.add(body, head, snout);
+        }
+
+        const hpBg = new THREE.Mesh(
+          sharedGeo.animalHpBg,
+          new THREE.MeshBasicMaterial({ color: 0x401010, side: THREE.DoubleSide })
+        );
+        const hpFill = new THREE.Mesh(
+          sharedGeo.animalHpFill,
+          new THREE.MeshBasicMaterial({ color: 0x55ff66, side: THREE.DoubleSide })
+        );
+        hpBg.position.set(0, 1.45, 0);
+        hpFill.position.set(0, 1.45, 0.01);
+        group.add(hpBg, hpFill);
+
+        animalGroup.add(group);
+        animals.push({
+          type,
+          group,
+          hpFill,
+          health: type === 'cow' ? 24 : type === 'pig' ? 18 : 16,
+          maxHealth: type === 'cow' ? 24 : type === 'pig' ? 18 : 16,
+          dir: Math.random() * Math.PI * 2,
+          moveTimer: 1 + Math.random() * 2,
+          speed: type === 'cow' ? 0.7 : type === 'pig' ? 0.8 : 0.85,
+          fleeTimer: 0,
+          stun: 0,
+          dead: false,
+          velY: 0,
+          radius: type === 'cow' ? 0.5 : type === 'pig' ? 0.46 : 0.42,
+          height: type === 'cow' ? 1.45 : type === 'pig' ? 1.3 : 1.35
+        });
+        return;
+      }
+    }
+
+    function updateAnimalHealth(animal) {
+      const ratio = Math.max(0, animal.health / animal.maxHealth);
+      animal.hpFill.scale.x = ratio;
+      animal.hpFill.position.x = (ratio - 1) * 0.48;
+    }
+
+    function updateAnimalPopulation(dt) {
+      return;
+      const animalTypes = ['sheep', 'cow', 'pig'];
+      for (const type of animalTypes) {
+        const state = animalRegenState[type];
+        const count = animals.filter(animal => !animal.dead && animal.type === type).length;
+
+        if (count < 2) state.active = true;
+        if (count >= 6) {
+          state.active = false;
+          state.timer = 0;
+          continue;
+        }
+        if (!state.active) continue;
+
+        state.timer -= dt;
+        if (state.timer <= 0) {
+          spawnAnimal(type);
+          state.timer = 0.9;
+        }
+      }
+    }
+
+    function animalCollidesAt(animal, x, footY, z) {
+      const radius = animal.radius;
+      const minX = x - radius, maxX = x + radius;
+      const minY = footY;
+      const maxY = footY + animal.height;
+      const minZ = z - radius, maxZ = z + radius;
+
+      return forEachSolidGridBlock(minX, maxX, minY, maxY, minZ, maxZ, (obj, ox, oy, oz) => (
+        minX < ox + 0.5 && maxX > ox - 0.5 &&
+        minY < oy + 0.5 && maxY > oy - 0.5 &&
+        minZ < oz + 0.5 && maxZ > oz - 0.5
+      ));
+    }
+
+    function findGroundUnder(x, z) {
+      if (x < -WORLD_HALF_X || x > WORLD_HALF_X || z < -WORLD_HALF_Z || z > WORLD_HALF_Z) return null;
+      return 0.5;
+    }
+
+    function hasGroundSupport(x, y, z, radius) {
+      const checks = [
+        [x, z],
+        [x + radius * 0.75, z],
+        [x - radius * 0.75, z],
+        [x, z + radius * 0.75],
+        [x, z - radius * 0.75]
+      ];
+      for (const [cx, cz] of checks) {
+        const groundY = findGroundUnder(cx, cz);
+        if (groundY != null && Math.abs(groundY - y) <= 1.2) return groundY;
+      }
+      return null;
+    }
+
+    function monsterCollidesAt(monster, x, y, z) {
+      const radius = monster.radius || 0.38;
+      const minX = x - radius, maxX = x + radius;
+      const minY = y - monster.height * 0.5, maxY = y + monster.height * 0.5;
+      const minZ = z - radius, maxZ = z + radius;
+
+      return forEachSolidGridBlock(minX, maxX, minY, maxY, minZ, maxZ, (obj, ox, oy, oz) => (
+        minX < ox + 0.5 && maxX > ox - 0.5 &&
+        minY < oy + 0.5 && maxY > oy - 0.5 &&
+        minZ < oz + 0.5 && maxZ > oz - 0.5
+      ));
+    }
+
+    function moveMonster(monster, flatDir, moveAmount) {
+      if (moveAmount === 0 || flatDir.lengthSq() < 0.0001) return;
+
+      const step = flatDir.clone().multiplyScalar(moveAmount);
+      const nextX = monster.mesh.position.x + step.x;
+      const nextZ = monster.mesh.position.z + step.z;
+      const currentGround = hasGroundSupport(monster.mesh.position.x, monster.mesh.position.y - monster.groundOffset, monster.mesh.position.z, monster.radius);
+      const nextGround = hasGroundSupport(nextX, monster.mesh.position.y - monster.groundOffset, nextZ, monster.radius);
+
+      if (currentGround == null || nextGround == null || Math.abs(nextGround - currentGround) > 1.15) {
+        return;
+      }
+      if (!monsterCollidesAt(monster, nextX, monster.mesh.position.y, monster.mesh.position.z)) {
+        monster.mesh.position.x = nextX;
+      }
+      if (!monsterCollidesAt(monster, monster.mesh.position.x, monster.mesh.position.y, nextZ)) {
+        monster.mesh.position.z = nextZ;
+      }
+      monster.mesh.position.y = nextGround + monster.groundOffset;
+    }
+
+    function updateAnimals(dt) {
+      if (animals.length > 0) {
+        for (const a of animals) {
+          animalGroup.remove(a.group);
+        }
+        animals.length = 0;
+      }
+      return;
+      updateAnimalPopulation(dt);
+      const phase = getDayPhase();
+      for (const a of animals) {
+        if (a.dead) continue;
+        a.stun = Math.max(0, a.stun - dt);
+
+        const hpBg = a.group.children[a.group.children.length - 2];
+        const hpFill = a.group.children[a.group.children.length - 1];
+        hpBg.lookAt(camera.position);
+        hpFill.lookAt(camera.position);
+
+        a.moveTimer -= dt;
+
+        if (a.stun > 0) {
+          a.group.rotation.y += dt * 2.5;
+          continue;
+        }
+
+        let moveSpeed = 0;
+        if (phase.key !== 'night' && phase.key !== 'preDawn') {
+          if (a.fleeTimer > 0) {
+            a.fleeTimer -= dt;
+            const away = new THREE.Vector3().subVectors(a.group.position, player.pos).setY(0);
+            if (away.lengthSq() > 0.001) {
+              away.normalize();
+              a.dir = Math.atan2(away.x, away.z);
+              moveSpeed = a.speed * 2.0;
+            }
+          } else {
+            if (a.moveTimer <= 0) {
+              a.dir += (Math.random() - 0.5) * 1.1;
+              a.moveTimer = 1.5 + Math.random() * 2.5;
+            }
+            moveSpeed = a.speed;
+          }
+        } else {
+          if (a.moveTimer <= 0) {
+            a.dir += (Math.random() - 0.5) * 0.8;
+            a.moveTimer = 1.5 + Math.random() * 2.2;
+          }
+          moveSpeed = 0.18;
+        }
+
+        const dx = Math.sin(a.dir) * moveSpeed * dt;
+        const dz = Math.cos(a.dir) * moveSpeed * dt;
+
+        const testX = a.group.position.x + dx;
+        const testZ = a.group.position.z + dz;
+        const currentFootY = a.group.position.y;
+        const groundAhead = hasGroundSupport(testX, currentFootY, testZ, a.radius);
+        const currentGround = hasGroundSupport(a.group.position.x, currentFootY, a.group.position.z, a.radius);
+
+        let canMoveX = true;
+        let canMoveZ = true;
+
+        if (groundAhead == null || currentGround == null || Math.abs(groundAhead - currentGround) > 1.2) {
+          canMoveX = false;
+          canMoveZ = false;
+          a.dir += (Math.random() > 0.5 ? 1 : -1) * 1.2;
+        }
+
+        if (canMoveX && animalCollidesAt(a, testX, a.group.position.y, a.group.position.z)) {
+          canMoveX = false;
+          a.dir += (Math.random() > 0.5 ? 1 : -1) * 1.0;
+        }
+        if (canMoveZ && animalCollidesAt(a, a.group.position.x, a.group.position.y, testZ)) {
+          canMoveZ = false;
+          a.dir += (Math.random() > 0.5 ? 1 : -1) * 1.0;
+        }
+
+        if (canMoveX) a.group.position.x = testX;
+        if (canMoveZ) a.group.position.z = testZ;
+
+        // gravity + ground sticking
+        a.velY -= 18 * dt;
+        let nextY = a.group.position.y + a.velY * dt;
+        if (!animalCollidesAt(a, a.group.position.x, nextY, a.group.position.z)) {
+          a.group.position.y = nextY;
+        } else {
+          a.velY = 0;
+        }
+
+        const groundY = hasGroundSupport(a.group.position.x, a.group.position.y, a.group.position.z, a.radius);
+        if (groundY != null) {
+          const desiredY = groundY;
+          if (a.group.position.y < desiredY || Math.abs(a.group.position.y - desiredY) < 0.2) {
+            a.group.position.y = desiredY;
+            a.velY = 0;
+          }
+        }
+
+        a.group.rotation.y = a.dir;
+
+      }
+    }
+
+    function removeAnimal(animal) {
+      animal.dead = true;
+      animalGroup.remove(animal.group);
+      const idx = animals.indexOf(animal);
+      if (idx >= 0) animals.splice(idx, 1);
+    }
+
+    // Monsters and projectiles
+    function spawnMonster(type, x, z) {
+      const config = MONSTER_DEFINITION.types[type] || MONSTER_DEFINITION.types.bandit_grunt;
+      const surface = findSurfaceY(Math.round(x), Math.round(z));
+      const y = (surface == null ? 1 : surface + 1);
+      const body = new THREE.Group();
+      body.position.set(x, y, z);
+
+      const bodyMaterial = new THREE.MeshLambertMaterial({ color: config.color });
+      const scale = config.boss ? 1.45 : 1;
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.72 * scale, 0.95 * scale, 0.42 * scale), bodyMaterial);
+      torso.position.set(0, 1.0, 0);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.42), materials.enemySkin);
+      head.position.set(0, 1.72 * scale, 0);
+      const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.16 * scale, 0.74 * scale, 0.16 * scale), bodyMaterial);
+      leftArm.position.set(-0.46, 1.05, 0);
+      const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.16 * scale, 0.74 * scale, 0.16 * scale), bodyMaterial);
+      rightArm.position.set(0.46, 1.05, 0);
+      const weapon = new THREE.Mesh(
+        new THREE.BoxGeometry(config.ranged ? 0.16 : 0.12, config.ranged ? 0.9 : 1.05, 0.12),
+        materials.enemyWeapon
+      );
+      weapon.position.set(0.58, 0.98, 0.28);
+
+      body.add(torso, head, leftArm, rightArm, weapon);
+      monsterGroup.add(body);
+
+      const hpBg = new THREE.Mesh(sharedGeo.monsterHpBg, new THREE.MeshBasicMaterial({ color: 0x401010, side: THREE.DoubleSide }));
+      const hpFill = new THREE.Mesh(sharedGeo.monsterHpFill, new THREE.MeshBasicMaterial({ color: 0x55ff66, side: THREE.DoubleSide }));
+      hpBg.position.set(0, 1.2, 0);
+      hpFill.position.set(0, 1.2, 0.01);
+      body.add(hpBg, hpFill);
+
+      const data = {
+        type,
+        mesh: body,
+        hpBg,
+        hpFill,
+        leftArm,
+        rightArm,
+        weapon,
+        label: config.label,
+        family: config.family,
+        damage: config.damage,
+        health: config.health,
+        maxHealth: config.health,
+        speed: config.speed,
+        radius: config.boss ? 0.68 : 0.42,
+        height: config.boss ? 2.25 : 1.7,
+        groundOffset: 0.0,
+        shootCd: 0,
+        attackCd: 0,
+        state: 'idle',
+        damageCd: 0,
+        stun: 0,
+        attackAnim: 0
+      };
+      monsters.push(data);
+    }
+
+    function updateMonsterHealth(m) {
+      const ratio = Math.max(0, m.health / m.maxHealth);
+      m.hpFill.scale.x = ratio;
+      m.hpFill.position.x = (ratio - 1) * 0.53;
+    }
+
+    function killMonster(m) {
+      monsterGroup.remove(m.mesh);
+      const idx = monsters.indexOf(m);
+      if (idx >= 0) monsters.splice(idx, 1);
+      if (Math.random() < 0.42) inventory.coal += 1;
+      const config = MONSTER_DEFINITION.types[m.type] || {};
+      const reward = config.boss ? 260 : config.family === '机关首领' ? 220 : 35 + Math.floor(Math.random() * 26);
+      inventory.changming_yu += reward;
+      setMessage(`击败了${m.label || '敌人'}，获得长鸣玉 x${reward}`, 1.2);
+      updateHotbar();
+    }
+
+    function isCampArea(area) {
+      return area && area.kind === '据点营地';
+    }
+
+    function isPlayerInsideMonsterArea(area) {
+      if (!area) return false;
+      return getMonsterAreaCenter(area).distanceTo(player.pos) <= area.radius;
+    }
+
+    function getMonsterAreaById(areaId) {
+      return MONSTER_DEFINITION.spawnAreas.find(area => area.id === areaId) || null;
+    }
+
+    function isMonsterCampActive(monster) {
+      const area = getMonsterAreaById(monster.spawnAreaId);
+      if (!isCampArea(area)) return true;
+      return isPlayerInsideMonsterArea(area);
+    }
+
+    function getAreaMaxActive(area) {
+      return isCampArea(area) ? Math.min(area.maxActive, 3) : area.maxActive;
+    }
+
+    function updateMonsters(dt) {
+      for (let i = monsters.length - 1; i >= 0; i--) {
+        const m = monsters[i];
+        const dist = m.mesh.position.distanceTo(player.pos);
+        if (dist > MONSTER_DEFINITION.despawnRadius) {
+          monsterGroup.remove(m.mesh);
+          monsters.splice(i, 1);
+          continue;
+        }
+        m.stun = Math.max(0, m.stun - dt);
+        m.attackCd = Math.max(0, (m.attackCd || 0) - dt);
+        m.shootCd = Math.max(0, (m.shootCd || 0) - dt);
+        m.hpBg.lookAt(camera.position);
+        m.hpFill.lookAt(camera.position);
+        if (m.stun > 0) continue;
+        if (!isMonsterCampActive(m)) {
+          m.attackAnim = 0;
+          continue;
+        }
+
+        const toPlayer = new THREE.Vector3().subVectors(player.pos, m.mesh.position).setY(0);
+        if (toPlayer.lengthSq() > 0.001) {
+          toPlayer.normalize();
+          m.mesh.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+        }
+
+        const config = MONSTER_DEFINITION.types[m.type] || {};
+        if (config.ranged && dist < 18 && m.shootCd <= 0) {
+          fireArrow(m);
+          m.shootCd = 2.2;
+        } else if (dist > 2.0 && dist < 80) {
+          moveMonster(m, toPlayer, m.speed * dt);
+        } else if (dist <= 2.15 && m.attackCd <= 0) {
+          damagePlayer(phaseMultiplierDamage(m.damage || 7));
+          m.attackCd = 1.15;
+        }
+      }
+    }
+
+    function phaseMultiplierDamage(base) {
+      return getDayPhase().key === 'night' ? base : Math.round(base * 0.8);
+    }
+
+    function explodeCreeper(m) {
+      const p = m.mesh.position.clone();
+      const dist = p.distanceTo(player.pos);
+      if (dist < 4.1) {
+        damagePlayer(Math.max(12, Math.round((4.1 - dist) * 8)));
+      }
+      for (let x = -2; x <= 2; x++) {
+        for (let y = -1; y <= 2; y++) {
+          for (let z = -2; z <= 2; z++) {
+            const d = Math.sqrt(x*x+y*y+z*z);
+            if (d <= 2.3) {
+              removeBlock(Math.round(p.x + x), Math.round(p.y + y - 0.4), Math.round(p.z + z));
+            }
+          }
+        }
+      }
+      // simple flash effect
+      const flash = new THREE.PointLight(0xffdd99, 2.2, 12, 1.5);
+      flash.position.copy(p);
+      scene.add(flash);
+      setTimeout(() => scene.remove(flash), 160);
+      setMessage('苦力怕爆炸了！', 1.1);
+      monsterGroup.remove(m.mesh);
+      const idx = monsters.indexOf(m);
+      if (idx >= 0) monsters.splice(idx, 1);
+    }
+
+    function fireArrow(m) {
+      const dir = new THREE.Vector3().subVectors(player.pos, m.mesh.position).normalize();
+      const arrow = new THREE.Mesh(sharedGeo.arrow, materials.arrow);
+      arrow.position.copy(m.mesh.position).add(new THREE.Vector3(0, 0.6, 0));
+      arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir.clone().normalize());
+      projectileGroup.add(arrow);
+      projectiles.push({
+        mesh: arrow,
+        vel: dir.multiplyScalar(10),
+        life: 3.2,
+        owner: 'monster',
+        damage: m.damage || 7
+      });
+    }
+
+    function updateProjectiles(dt) {
+      const playerSheltered = isPlayerSheltered();
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        p.life -= dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+
+        if (p.owner === 'monster') {
+          if (playerSheltered && p.mesh.position.distanceTo(player.pos) < 2.2) {
+            projectileGroup.remove(p.mesh);
+            projectiles.splice(i,1);
+            continue;
+          }
+          if (p.mesh.position.distanceTo(player.pos) < 1.0) {
+            damagePlayer(p.damage || 7);
+            projectileGroup.remove(p.mesh);
+            projectiles.splice(i,1);
+            continue;
+          }
+        } else {
+          let hitTarget = false;
+          for (const m of monsters) {
+            if (p.mesh.position.distanceTo(m.mesh.position) < 0.95) {
+              m.health -= p.damage || 22;
+              updateMonsterHealth(m);
+              if (m.health <= 0) killMonster(m);
+              hitTarget = true;
+              break;
+            }
+          }
+          if (!hitTarget) {
+            for (const a of animals) {
+              if (a.dead) continue;
+              if (p.mesh.position.distanceTo(a.group.position) < 0.95) {
+                a.health -= p.damage || 22;
+                a.fleeTimer = 3.2;
+                updateAnimalHealth(a);
+                if (a.health <= 0) {
+                  giveAnimalDrops(a.type);
+                  removeAnimal(a);
+                }
+                hitTarget = true;
+                break;
+              }
+            }
+          }
+          if (hitTarget) {
+            projectileGroup.remove(p.mesh);
+            projectiles.splice(i,1);
+            continue;
+          }
+        }
+        const bx = Math.round(p.mesh.position.x);
+        const by = Math.round(p.mesh.position.y);
+        const bz = Math.round(p.mesh.position.z);
+        if (grid.has(keyOf(bx,by,bz)) || p.life <= 0) {
+          projectileGroup.remove(p.mesh);
+          projectiles.splice(i,1);
+        }
+      }
+    }
+
+    function updateSpawning(dt) {
+      spawnTimer -= dt;
+      if (spawnTimer > 0) return;
+      spawnTimer = MONSTER_DEFINITION.spawnInterval;
+
+      if (monsters.length >= MONSTER_DEFINITION.maxActive) {
+        trimMonstersTo(MONSTER_DEFINITION.maxActive);
+        return;
+      }
+
+      const activeAreas = MONSTER_DEFINITION.spawnAreas.filter(area => {
+        const center = getMonsterAreaCenter(area);
+        if (isCampArea(area)) return isPlayerInsideMonsterArea(area);
+        return center.distanceTo(player.pos) < MONSTER_DEFINITION.activationRadius;
+      });
+      if (activeAreas.length === 0) return;
+
+      activeAreas.sort((a, b) => getMonsterAreaCenter(a).distanceTo(player.pos) - getMonsterAreaCenter(b).distanceTo(player.pos));
+      let spawnedCount = 0;
+      for (const area of activeAreas) {
+        while (
+          spawnedCount < MONSTER_DEFINITION.spawnBatch &&
+          monsters.length < MONSTER_DEFINITION.maxActive &&
+          monsters.filter(m => m.spawnAreaId === area.id).length < getAreaMaxActive(area)
+        ) {
+          if (spawnMonsterInArea(area)) spawnedCount++;
+          else break;
+        }
+        if (spawnedCount >= MONSTER_DEFINITION.spawnBatch || monsters.length >= MONSTER_DEFINITION.maxActive) break;
+      }
+    }
+
+    function getMonsterAreaCenter(area) {
+      return new THREE.Vector3(area.x * WORLD_HALF_X, 1, area.z * WORLD_HALF_Z);
+    }
+
+    function spawnMonsterInArea(area) {
+      for (let tries = 0; tries < 8; tries++) {
+        const type = area.types[Math.floor(Math.random() * area.types.length)];
+        const config = MONSTER_DEFINITION.types[type] || {};
+        if (config.boss && monsters.some(m => m.spawnAreaId === area.id && m.type === type)) continue;
+        const angle = Math.random() * Math.PI * 2;
+        const nearPlayer = getMonsterAreaCenter(area).distanceTo(player.pos) < area.radius * 1.4;
+        const dist = nearPlayer ? 10 + Math.random() * 52 : area.radius * (0.18 + Math.random() * 0.72);
+        const centerX = nearPlayer ? player.pos.x : area.x * WORLD_HALF_X;
+        const centerZ = nearPlayer ? player.pos.z : area.z * WORLD_HALF_Z;
+        const x = centerX + Math.cos(angle) * dist;
+        const z = centerZ + Math.sin(angle) * dist;
+        const areaCenter = getMonsterAreaCenter(area);
+        if (new THREE.Vector3(x, 1, z).distanceTo(areaCenter) > area.radius * 1.15) continue;
+        if (new THREE.Vector3(x, 1, z).distanceTo(player.pos) < 8) continue;
+        spawnMonster(type, x, z);
+        const spawned = monsters[monsters.length - 1];
+        if (spawned) {
+          spawned.spawnAreaId = area.id;
+          spawned.spawnAreaName = area.name;
+        }
+        return true;
+      }
+      return false;
+    }
+
+    function spawnNearPlayer(daytimeForestOnly, allowEverywhereAtNight=false) {
+      for (let tries = 0; tries < 22; tries++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = daytimeForestOnly ? 10 + Math.random() * 8 : 8 + Math.random() * 16;
+        const x = player.pos.x + Math.cos(angle) * dist;
+        const z = player.pos.z + Math.sin(angle) * dist;
+        if (!allowEverywhereAtNight && !daytimeForestOnly && z > 6) continue;
+        if (daytimeForestOnly && z > -8) continue;
+        const pick = Math.random();
+        const type = pick < 0.34 ? 'creeper' : pick < 0.68 ? 'zombie' : 'skeleton';
+        spawnMonster(type, x, z);
+        break;
+      }
+    }
+
+    function trimMonstersTo(maxCount) {
+      while (monsters.length > maxCount) {
+        let farthestIndex = 0;
+        let farthestDist = -1;
+        for (let i = 0; i < monsters.length; i++) {
+          const d = monsters[i].mesh.position.distanceTo(player.pos);
+          if (d > farthestDist) {
+            farthestDist = d;
+            farthestIndex = i;
+          }
+        }
+        const m = monsters[farthestIndex];
+        monsterGroup.remove(m.mesh);
+        monsters.splice(farthestIndex, 1);
+      }
+    }
+
+    function damagePlayer(amount) {
+      if (player.hurtCooldown > 0 || dead) return;
+      player.health -= amount;
+      player.hurtCooldown = 0.42;
+      setMessage(`受到 ${amount} 点伤害`, 0.7);
+      if (player.health <= 0) {
+        player.health = 0;
+        dead = true;
+        deadEl.style.display = 'flex';
+        document.exitPointerLock?.();
+      }
+      updateHUD();
+    }
+
+    // Crafting and hotbar
+    function toggleCraft(show) {
+      craftEl.style.display = show ? 'flex' : 'none';
+      if (show) {
+        refreshCraftButtons();
+        document.exitPointerLock?.();
+      } else if (gameStarted && !dead) {
+        renderer.domElement.requestPointerLock?.();
+      }
+    }
+
+    function craftItem(id) {
+      if (id === 'planks') {
+        if (inventory.wood >= 1) {
+          inventory.wood -= 1;
+          inventory.planks += 4;
+          setMessage('制作了木板 x4', 1.2);
+        } else setMessage('木头不够', 1);
+      }
+      if (id === 'wood_pickaxe') {
+        if (inventory.planks >= 3 && inventory.wood >= 2) {
+          inventory.planks -= 3;
+          inventory.wood -= 2;
+          inventory.wood_pickaxe += 1;
+          setMessage('制作了木镐 x1，现在可以采铁矿', 1.4);
+        } else setMessage('材料不够', 1);
+      }
+      if (id === 'stone_pickaxe') {
+        if (inventory.stone >= 3 && inventory.planks >= 2) {
+          inventory.stone -= 3;
+          inventory.planks -= 2;
+          inventory.stone_pickaxe += 1;
+          setMessage('制作了石镐 x1，现在可以采金矿和黑曜石', 1.4);
+        } else setMessage('材料不够', 1);
+      }
+      if (id === 'iron_pickaxe') {
+        if (inventory.iron_ore >= 3 && inventory.planks >= 2) {
+          inventory.iron_ore -= 3;
+          inventory.planks -= 2;
+          inventory.iron_pickaxe += 1;
+          setMessage('制作了铁镐 x1，现在可以采钻石矿', 1.4);
+        } else setMessage('材料不够', 1);
+      }
+      if (id === 'gold_pickaxe') {
+        if (inventory.gold_ore >= 3 && inventory.planks >= 2) {
+          inventory.gold_ore -= 3;
+          inventory.planks -= 2;
+          inventory.gold_pickaxe += 1;
+          setMessage('制作了金镐 x1，攻击更痛但采矿等级不高于铁镐', 1.4);
+        } else setMessage('材料不够', 1);
+      }
+      if (id === 'diamond_pickaxe') {
+        if (inventory.diamond_ore >= 3 && inventory.wood >= 2) {
+          inventory.diamond_ore -= 3;
+          inventory.wood -= 2;
+          inventory.diamond_pickaxe += 1;
+          setMessage('制作了钻石镐 x1，当前是最强工具', 1.4);
+        } else setMessage('材料不够', 1);
+      }
+      if (id === 'wood_sword') {
+        if (inventory.wood >= 2) {
+          inventory.wood -= 2;
+          inventory.wood_sword += 1;
+          setMessage('制作了木剑 x1，近战伤害提高了', 1.3);
+        } else setMessage('木头不够', 1);
+      }
+      if (id === 'diamond_sword') {
+        if (inventory.diamond_ore >= 2) {
+          inventory.diamond_ore -= 2;
+          inventory.diamond_sword += 1;
+          setMessage('制作了钻石剑 x1，近战非常强', 1.3);
+        } else setMessage('钻石矿不够', 1);
+      }
+      if (id === 'wood_bow') {
+        if (inventory.wood >= 3) {
+          inventory.wood -= 3;
+          inventory.wood_bow += 1;
+          setMessage('制作了木弓 x1，按 F 可以射击', 1.3);
+        } else setMessage('木头不够', 1);
+      }
+      if (id === 'stone_bow') {
+        if (inventory.stone >= 3 && inventory.wood >= 2) {
+          inventory.stone -= 3;
+          inventory.wood -= 2;
+          inventory.stone_bow += 1;
+          setMessage('制作了石弓 x1，伤害和射速都更强', 1.3);
+        } else setMessage('石头或木头不够', 1);
+      }
+      if (id === 'gold_bow') {
+        if (inventory.gold_ore >= 3 && inventory.wood >= 2) {
+          inventory.gold_ore -= 3;
+          inventory.wood -= 2;
+          inventory.gold_bow += 1;
+          setMessage('制作了金弓 x1，射速很快', 1.3);
+        } else setMessage('金矿或木头不够', 1);
+      }
+      if (id === 'obsidian_bow') {
+        if (inventory.obsidian >= 3 && inventory.wood >= 2) {
+          inventory.obsidian -= 3;
+          inventory.wood -= 2;
+          inventory.obsidian_bow += 1;
+          setMessage('制作了黑曜石弓 x1，威力很强', 1.3);
+        } else setMessage('黑曜石或木头不够', 1);
+      }
+      if (id === 'diamond_bow') {
+        if (inventory.diamond_ore >= 3 && inventory.wood >= 2) {
+          inventory.diamond_ore -= 3;
+          inventory.wood -= 2;
+          inventory.diamond_bow += 1;
+          setMessage('制作了钻石弓 x1，当前是最强弓', 1.3);
+        } else setMessage('钻石矿或木头不够', 1);
+      }
+      if (id === 'torch') {
+        if (inventory.planks >= 1 && inventory.coal >= 1) {
+          inventory.planks -= 1;
+          inventory.coal -= 1;
+          inventory.torch += 4;
+          setMessage('制作了火把 x4', 1.2);
+        } else setMessage('木板或煤炭不够', 1);
+      }
+      if (id === 'stone_bricks') {
+        if (inventory.stone >= 2) {
+          inventory.stone -= 2;
+          inventory.stone_bricks += 2;
+          setMessage('制作了石砖 x2', 1.2);
+        } else setMessage('石头不够', 1);
+      }
+      if (id === 'wood_door') {
+        if (inventory.planks >= 3 && inventory.wood >= 1) {
+          inventory.planks -= 3;
+          inventory.wood -= 1;
+          inventory.wood_door += 1;
+          setMessage('制作了木门 x1，可以拿来做房门', 1.2);
+        } else setMessage('木板或木头不够', 1);
+      }
+      if (id === 'wood_window') {
+        if (inventory.planks >= 2 && inventory.wood >= 1) {
+          inventory.planks -= 2;
+          inventory.wood -= 1;
+          inventory.wood_window += 1;
+          setMessage('制作了木窗 x1，可以拿来做窗户', 1.2);
+        } else setMessage('木板或木头不够', 1);
+      }
+      if (id === 'bed') {
+        if (inventory.wool >= 3 && inventory.planks >= 3) {
+          inventory.wool -= 3;
+          inventory.planks -= 3;
+          inventory.bed += 1;
+          setMessage('制作了床 x1，夜里可以睡到黎明', 1.2);
+        } else setMessage('羊毛或木板不够', 1);
+      }
+      if (id === 'wood_house') {
+        if (inventory.planks >= 50) {
+          inventory.planks -= 50;
+          inventory.wood_house += 1;
+          setMessage('制作了木头屋 x1，右键可一键搭出木屋', 1.4);
+        } else setMessage('木板不够', 1);
+      }
+      if (id === 'stone_house') {
+        if (inventory.stone >= 50) {
+          inventory.stone -= 50;
+          inventory.stone_house += 1;
+          setMessage('制作了石头屋 x1，右键可一键搭出石屋', 1.4);
+        } else setMessage('石头不够', 1);
+      }
+      if (id === 'obsidian_house') {
+        if (inventory.obsidian >= 50) {
+          inventory.obsidian -= 50;
+          inventory.obsidian_house += 1;
+          setMessage('制作了黑曜石屋 x1，右键可一键搭出黑曜石屋', 1.4);
+        } else setMessage('黑曜石不够', 1);
+      }
+      if (id === 'gold_house') {
+        if (inventory.gold_ore >= 50) {
+          inventory.gold_ore -= 50;
+          inventory.gold_house += 1;
+          setMessage('制作了金屋 x1，右键可一键搭出金屋', 1.4);
+        } else setMessage('金矿不够', 1);
+      }
+      if (id === 'diamond_house') {
+        if (inventory.diamond_ore >= 50) {
+          inventory.diamond_ore -= 50;
+          inventory.diamond_house += 1;
+          setMessage('制作了钻石屋 x1，右键可一键搭出钻石屋', 1.4);
+        } else setMessage('钻石矿不够', 1);
+      }
+      updateHotbar();
+      refreshCraftButtons();
+    }
+
+    function updateHotbar() {
+      hotbarEl.innerHTML = '';
+      const weaponSlots = classLoadouts[player.role].weapons.map((weapon, idx) => ({
+        tag: idx === player.weaponIndex ? '已装备' : 'Q切换',
+        label: weapon.label,
+        active: idx === player.weaponIndex
+      }));
+      const unlockedSkills = getUnlockedSkills();
+      if (player.skillIndex >= unlockedSkills.length) player.skillIndex = 0;
+      const skillSlots = unlockedSkills.map((skill, idx) => ({
+        tag: `${idx + 1}`,
+        label: skill.label,
+        active: idx === player.skillIndex
+      }));
+
+      [...weaponSlots, ...skillSlots].forEach((item) => {
+        const el = document.createElement('div');
+        el.className = 'slot' + (item.active ? ' active' : '');
+        el.innerHTML = `<div class="key">${item.tag}</div><div>${item.label}</div>`;
+        hotbarEl.appendChild(el);
+      });
+    }
+
+    let messageTimeout = null;
+    function setMessage(text, sec=1.5) {
+      messageEl.style.display = 'block';
+      messageEl.textContent = text;
+      clearTimeout(messageTimeout);
+      messageTimeout = setTimeout(() => {
+        messageEl.style.display = 'none';
+      }, sec * 1000);
+    }
+
+    function showStartupError(stage, err) {
+      console.error(`startup failed at ${stage}:`, err);
+      gameStarted = false;
+      menuEl.style.display = 'flex';
+      const detail = err && err.message ? `：${err.message}` : '';
+      setMessage(`启动卡在${stage}${detail}`, 3.2);
+    }
+
+    function beginRun(role) {
+      try {
+        restartGame();
+      } catch (err) {
+        showStartupError('世界重置', err);
+        return;
+      }
+
+      try {
+        setPlayerRole(role);
+      } catch (err) {
+        showStartupError('职业初始化', err);
+        return;
+      }
+
+      try {
+        deadEl.style.display = 'none';
+        gameStarted = true;
+        menuEl.style.display = 'none';
+        requestAnimationFrame(() => {
+          try {
+            renderer.domElement.requestPointerLock?.();
+            renderer.domElement.focus?.();
+          } catch (err) {
+            console.warn('pointer lock request failed:', err);
+          }
+        });
+        setMessage(`${classLoadouts[role].label}已出发，进入荒野探索。`, 2.3);
+      } catch (err) {
+        showStartupError('界面切换', err);
+      }
+    }
+
+    startWarriorBtn.onclick = () => {
+      beginRun('warrior');
+    };
+
+    startArcherBtn.onclick = () => {
+      beginRun('archer');
+    };
+
+    restartBtn.onclick = () => {
+      restartGame();
+      deadEl.style.display = 'none';
+      gameStarted = true;
+      menuEl.style.display = 'none';
+    };
+
+    init();
+  </script>
+</body>
+</html>

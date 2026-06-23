@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>火影忍者 - 人机对战</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <canvas id="game" aria-label="忍者人机对战游戏画面"></canvas>
+
+      <section class="hud hud--top">
+        <div class="fighter-panel fighter-panel--p1">
+          <div>
+            <span>你</span>
+            <strong id="p1-name">疾风</strong>
+          </div>
+          <div class="bars">
+            <label>体力 <b id="p1-hp-text">100 / 100</b></label>
+            <i class="bar bar--hp"><em id="p1-hp"></em></i>
+            <label>查克拉 <b id="p1-chakra-text">80 / 100</b></label>
+            <i class="bar bar--chakra"><em id="p1-chakra"></em></i>
+          </div>
+        </div>
+
+        <div class="round-panel">
+          <span>忍者人机对战</span>
+          <strong id="round-state">准备</strong>
+          <small id="timer">99</small>
+        </div>
+
+        <div class="fighter-panel fighter-panel--p2">
+          <div>
+            <span>AI 对手</span>
+            <strong id="p2-name">雷牙</strong>
+          </div>
+          <div class="bars">
+            <label>体力 <b id="p2-hp-text">100 / 100</b></label>
+            <i class="bar bar--hp bar--p2"><em id="p2-hp"></em></i>
+            <label>查克拉 <b id="p2-chakra-text">80 / 100</b></label>
+            <i class="bar bar--chakra bar--p2"><em id="p2-chakra"></em></i>
+          </div>
+        </div>
+      </section>
+
+      <section class="overlay overlay--active" id="start-overlay">
+        <div class="modal">
+          <span class="eyebrow">Player vs AI</span>
+          <h1>火影忍者<br />人机对战</h1>
+          <p>你操作一名原创忍者挑战 AI。用体术压近身，用手里剑逼走位，格挡蓄查克拉，满能量后释放奥义收尾。</p>
+
+          <div class="select-grid">
+            <div>
+              <strong class="select-title">你的角色</strong>
+              <div class="cards" id="p1-select"></div>
+            </div>
+            <div>
+              <strong class="select-title">AI 对手</strong>
+              <div class="random-card">
+                <strong>随机选角</strong>
+                <span>每次挑战开始时，AI 会从你未选择的角色中随机抽取一名对手。</span>
+              </div>
+            </div>
+          </div>
+
+          <button id="start-button" type="button">挑战 AI</button>
+        </div>
+      </section>
+
+      <section class="overlay" id="end-overlay">
+        <div class="modal modal--end">
+          <span class="eyebrow">Battle End</span>
+          <h2 id="winner-title">挑战胜利</h2>
+          <p id="winner-text">漂亮的连招。</p>
+          <button id="restart-button" type="button">重新选择</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./src/characters.js"></script>
+    <script src="./src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>忍影试炼</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <canvas id="game" aria-label="忍影试炼游戏画面"></canvas>
+
+      <section class="topbar">
+        <div class="brand">
+          <span>原创忍者动作</span>
+          <strong>忍影试炼</strong>
+        </div>
+        <div class="stats">
+          <div><span id="stat-wave-label">波次</span><strong id="wave">1</strong></div>
+          <div><span id="stat-kills-label">击破</span><strong id="kills">0</strong></div>
+          <div><span id="stat-combo-label">连击</span><strong id="combo">0</strong></div>
+          <div><span id="stat-score-label">评分</span><strong id="score">0</strong></div>
+        </div>
+      </section>
+
+      <section class="controls" id="controls-hint">
+        <span>WASD 移动</span>
+        <span>左键连斩</span>
+        <span>Q 手里剑</span>
+        <span>E 残影</span>
+        <span>R 震</span>
+        <span>Z 奥义</span>
+        <span>C 蓄能</span>
+        <span>Space 冲刺</span>
+      </section>
+
+      <section class="hud">
+        <div class="vitals">
+          <label><span id="p1-vitals-label">体力</span> <strong id="hp-text">100 / 100</strong></label>
+          <div class="bar bar--hp"><i id="hp-bar"></i></div>
+          <label>查克拉 <strong id="chakra-text">100 / 100</strong></label>
+          <div class="bar bar--chakra"><i id="chakra-bar"></i></div>
+        </div>
+        
+        <div class="skills">
+          <div class="skill"><b>左键</b><span id="slash-name">风刃连斩</span><em id="slash-cd">就绪</em></div>
+          <div class="skill"><b>Q</b><span id="shuriken-name">星铁手里剑</span><em id="shuriken-cd">就绪</em></div>
+          <div class="skill"><b>E</b><span id="clone-name">残影步</span><em id="clone-cd">就绪</em></div>
+          <div class="skill"><b>R</b><span id="burst-name">查克拉震</span><em id="burst-cd">就绪</em></div>
+          <div class="skill skill--ultimate"><b>Z</b><span id="ult-name">月轮奥义</span><em id="ult-cd">蓄能</em></div>
+        </div>
+      </section>
+
+      <section class="overlay overlay--active" id="start-overlay">
+        <div class="modal">
+          <span class="eyebrow">Ninja Arena</span>
+          <h1>忍影试炼</h1>
+          <p>
+            选择闯关模式抵御影兵，或者进入人机对战模式挑战 AI。对战中可以蓄查克拉、打出忍术连招、用替身术脱身，再抓时机释放奥义。
+          </p>
+          <div class="mode-select">
+            <button class="mode-card mode-card--active" data-mode="trial" type="button">
+              <strong>闯关模式</strong>
+              <span>原来的 5 波试炼，最后挑战影首。</span>
+            </button>
+            <button class="mode-card" data-mode="duel" type="button">
+              <strong>人机对战</strong>
+              <span>你选择角色，AI 随机选角，先击倒对方获胜。</span>
+            </button>
+          </div>
+          <div class="loadout-group">
+            <div class="loadout">
+              <button class="loadout-card loadout-card--active" data-style="balanced" type="button">
+                <strong>岚 · 均衡流</strong>
+                <span>体力 112。风刃、手里剑、残影和月轮奥义。</span>
+              </button>
+              <button class="loadout-card" data-style="swift" type="button">
+                <strong>绯月 · 雷影流</strong>
+                <span>体力 86。飞针、换位、穿心突进和乱舞奥义。</span>
+              </button>
+              <button class="loadout-card" data-style="guard" type="button">
+                <strong>铁心 · 岩铠流</strong>
+                <span>体力 156。重刃、铁壁、地裂震和山河奥义。</span>
+              </button>
+            </div>
+          </div>
+          
+          <button id="start-button" type="button">开始游戏</button>
+        </div>
+      </section>
+
+      <section class="overlay" id="end-overlay">
+        <div class="modal">
+          <span class="eyebrow" id="end-eyebrow">Trial End</span>
+          <h2 id="end-title">试炼结束</h2>
+          <p id="end-text">你倒在了训练场上。</p>
+          <button id="restart-button" type="button">返回选择</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./src/main.js"></script>
+  </body>
+</html>

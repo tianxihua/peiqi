@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>英雄联盟风三路峡谷</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <canvas id="game" aria-label="英雄联盟风三路峡谷"></canvas>
+
+      <div class="quick-ui">
+        <div class="quick-ui__gold">金币 <strong id="quick-gold">500</strong></div>
+        <div class="quick-ui__buffs" id="quick-buffs"></div>
+        <div class="quick-ui__recall" id="quick-recall">
+          <span id="quick-recall-text">回城中 3.0 秒</span>
+          <div class="quick-ui__recall-bar"><i id="quick-recall-bar"></i></div>
+        </div>
+      </div>
+
+      <div class="panel panel--skills">
+        <div class="skill skill--q">
+          <div class="skill__icon">
+            <span>Q</span>
+          </div>
+          <div class="skill__meta">
+            <strong id="q-name">技能 Q</strong>
+            <small id="q-cd">可用</small>
+          </div>
+        </div>
+        <div class="skill skill--e">
+          <div class="skill__icon">
+            <span>E</span>
+          </div>
+          <div class="skill__meta">
+            <strong id="e-name">技能 E</strong>
+            <small id="e-cd">可用</small>
+          </div>
+        </div>
+        <div class="skill skill--r">
+          <div class="skill__icon">
+            <span>R</span>
+          </div>
+          <div class="skill__meta">
+            <strong id="r-name">技能 R</strong>
+            <small id="r-cd">Lv.6 解锁</small>
+          </div>
+        </div>
+        <div class="skill skill--t">
+          <div class="skill__icon">
+            <span>T</span>
+          </div>
+          <div class="skill__meta">
+            <strong>回城</strong>
+            <small id="t-cd">可引导</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud">
+        <button class="hud-toggle" id="hud-toggle" type="button">显示面板 Tab</button>
+        <div class="hud__top">
+          <div class="panel panel--brand">
+            <div class="eyebrow">Three Lane MOBA</div>
+            <h1>峡谷沙盘</h1>
+            <p id="objective-text">选英雄、吃线、清野、拆塔，最后推掉敌方主水晶。</p>
+          </div>
+
+          <div class="panel panel--stats">
+            <div class="stat"><span>等级</span><strong id="level">1</strong></div>
+            <div class="stat"><span>金币</span><strong id="gold">500</strong></div>
+            <div class="stat"><span>K / D / A</span><strong id="score">0 / 0 / 0</strong></div>
+            <div class="stat"><span>波次</span><strong id="wave">0</strong></div>
+            <div class="stat"><span>线路</span><strong id="lane-name">中路</strong></div>
+          </div>
+        </div>
+
+        <div class="hud__bottom">
+          <div class="panel panel--hero">
+            <div class="bars">
+              <div>
+                <label id="hp-label">生命 / 等级</label>
+                <div class="bar"><i id="hp-bar"></i></div>
+                <strong id="hp-text">0 / 0</strong>
+              </div>
+              <div>
+                <label>法力</label>
+                <div class="bar bar--mana"><i id="mana-bar"></i></div>
+                <strong id="mana-text">0 / 0</strong>
+              </div>
+              <div>
+                <label>经验</label>
+                <div class="bar bar--xp"><i id="xp-bar"></i></div>
+                <strong id="xp-text">0 / 100</strong>
+              </div>
+              <div>
+                <label>回城</label>
+                <div class="bar bar--recall"><i id="recall-bar"></i></div>
+                <strong id="recall-text">未引导</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel panel--inventory">
+            <div class="inventory__head">
+              <span>装备栏</span>
+              <strong id="hero-name">曙光骑士</strong>
+            </div>
+            <div class="inventory__slots" id="inventory-slots"></div>
+          </div>
+
+          <div class="panel panel--controls">
+            <p>WASD 移动，鼠标瞄准，左键普攻</p>
+            <p>Q / E / R 放技能，T 回城，B 查看商店</p>
+            <p>系统会按分路自动出装，队友和对手也会各守自己的线</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="shop" id="shop">
+        <div class="shop__head">
+          <div>
+            <div class="eyebrow">Shop</div>
+            <h2>商店</h2>
+          </div>
+          <button class="shop__close" id="shop-close" type="button">关闭</button>
+        </div>
+        <p class="shop__hint" id="shop-hint">靠近泉水或商店管理员后可购买装备。</p>
+        <div class="shop__list" id="shop-items"></div>
+      </aside>
+
+      <section class="overlay overlay--active" id="start-overlay">
+        <div class="modal modal--wide">
+          <div class="eyebrow">Champion Select</div>
+          <h2>开始 3V3 分路匹配</h2>
+          <p>先选你的偏好分路，再按分路匹配英雄：对抗路给战士，中路给法师，发育路给射手。双方六名英雄都不会重复，并且会各守自己的分路。</p>
+          <div class="hero-grid" id="hero-grid">
+            <button class="hero-card" data-lane="top" type="button">
+              <strong>曙光骑士</strong>
+              <span>对抗路 / 前排战士</span>
+              <small>偏好对抗路时会匹配到这里</small>
+            </button>
+            <button class="hero-card hero-card--active" data-lane="mid" type="button">
+              <strong>星纹术师</strong>
+              <span>中路 / 法师</span>
+              <small>这里会匹配到星纹术师</small>
+            </button>
+            <button class="hero-card" data-lane="bot" type="button">
+              <strong>风羽游侠</strong>
+              <span>发育路 / 射手</span>
+              <small>偏好发育路时会匹配到风羽游侠</small>
+            </button>
+          </div>
+          <button id="start-button" type="button">开始匹配</button>
+        </div>
+      </section>
+
+      <section class="overlay" id="end-overlay">
+        <div class="modal">
+          <div class="eyebrow" id="end-tag">Victory</div>
+          <h2 id="end-title">胜利</h2>
+          <p id="end-text">你成功摧毁了敌方主水晶。</p>
+          <button id="restart-button" type="button">再来一局</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="./src/main.js"></script>
+  </body>
+</html>
