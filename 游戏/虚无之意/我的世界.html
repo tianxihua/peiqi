@@ -407,11 +407,11 @@
     const MONSTER_DEFINITION = {
       bossTotal: 43,
       publicBetaNewBossCount: 10,
-      maxActive: 72,
-      activationRadius: 260,
-      despawnRadius: 980,
-      spawnInterval: 0.35,
-      spawnBatch: 3,
+      maxActive: 32,
+      activationRadius: 320,
+      despawnRadius: 520,
+      spawnInterval: 1.2,
+      spawnBatch: 1,
       types: {
         bandit_grunt: { label: '绿林喽啰', family: '人形敌人', health: 58, speed: 1.55, damage: 7, color: 0x7c3f32 },
         bandit_brute: { label: '绿林打手', family: '人形敌人', health: 92, speed: 1.25, damage: 12, color: 0x8d4c35 },
@@ -470,21 +470,18 @@
         boss_white_wolf_lord: makeBoss('白狼主', '公测新增BOSS', 0xdde4e8, { health: 350, speed: 2.2, damage: 24 })
       },
       spawnAreas: [
-        { id: 'newbie_field', name: '新手草原', kind: '野外小怪', region: '江南古道', x: 0.00, z: 0.02, radius: 520, maxActive: 36, types: ['bandit_grunt', 'thief', 'stupid_thief', 'jackal'], color: 0xa65a36 },
-        { id: 'main_road_patrol', name: '主路巡逻', kind: '野外小怪', region: '江南古道', x: 0.00, z: 0.16, radius: 430, maxActive: 30, types: ['bandit_grunt', 'thief', 'bandit_brute'], color: 0xa65a36 },
-        { id: 'kaifeng_suburb', name: '开封城郊流寇', kind: '野外小怪', region: '开封城', x: 0.00, z: 0.58, radius: 460, maxActive: 32, types: ['bandit_grunt', 'bandit_adviser', 'thief'], color: 0xa65a36 },
-        { id: 'foye_camp', name: '佛爷寨', kind: '据点营地', region: '开封城', x: -0.08, z: 0.72, radius: 150, maxActive: 3, types: ['bandit_grunt', 'bandit_brute', 'bandit_adviser', 'stupid_thief', 'boss_daozhu', 'boss_heicaishen'], color: 0xb23d32 },
-        { id: 'longhu_camp', name: '龙虎寨', kind: '据点营地', region: '燕南', x: 0.08, z: 0.42, radius: 145, maxActive: 3, types: ['bandit_grunt', 'thief', 'bandit_brute', 'boss_wuma', 'boss_qianye'], color: 0xb23d32 },
-        { id: 'jiurou_camp', name: '酒肉山林', kind: '据点营地', region: '荆楚', x: -0.58, z: -0.22, radius: 150, maxActive: 3, types: ['bandit_grunt', 'thief', 'bandit_adviser', 'tree_spirit', 'boss_dalang', 'boss_shelangzhong'], color: 0xb23d32 },
-        { id: 'kumu_pass', name: '枯木隘', kind: '据点营地', region: '大巴山', x: -0.56, z: -0.52, radius: 155, maxActive: 3, types: ['bandit_grunt', 'bandit_brute', 'sand_worm', 'boss_yewanshan', 'boss_guishou'], color: 0xb23d32 },
-        { id: 'northeast_forest_boss', name: '不见山东北山林', kind: '野外BOSS区域', region: '雁门关', x: 0.64, z: 0.52, radius: 180, maxActive: 10, types: ['fire_wolf', 'north_leopard', 'jackal', 'boss_xiaoxiaoba', 'boss_sinan_swordsman'], color: 0x9c5b2f },
-        { id: 'southwest_valley_boss', name: '不见山西南山谷', kind: '野外BOSS区域', region: '汉中盆地', x: -0.08, z: -0.30, radius: 175, maxActive: 10, types: ['boar_king', 'wooden_ox', 'earth_walker', 'boss_xunxin', 'boss_tianying'], color: 0x9c5b2f },
-        { id: 'east_jungle_boss', name: '不见山东部丛林', kind: '野外BOSS区域', region: '南唐', x: 0.64, z: -0.50, radius: 175, maxActive: 10, types: ['shadow_panther', 'wooden_mantis', 'wooden_viper', 'boss_yidao', 'boss_jiangwulang'], color: 0x9c5b2f },
-        { id: 'north_icefield_boss', name: '不见山北部冰原', kind: '野外BOSS区域', region: '雁门关', x: 0.48, z: 0.62, radius: 170, maxActive: 10, types: ['frost_bear', 'zhuoyuan', 'wind_crossbow', 'boss_white_wolf_lord'], color: 0x9c5b2f },
-        { id: 'xuanhe_dungeon', name: '悬河之墟地窟', kind: '地窟副本', region: '杭州城', x: 0.50, z: 0.04, radius: 135, maxActive: 18, types: ['bandit_adviser', 'iron_centipede', 'lost_post_boat', 'golden_ou_bird', 'boss_piyingshi', 'boss_shuidaoren'], color: 0x6f3a8b },
-        { id: 'tiangong_dungeon', name: '天工地窟', kind: '地窟副本', region: '太湖', x: 0.50, z: -0.26, radius: 135, maxActive: 18, types: ['bandit_brute', 'iron_centipede', 'bone_flower', 'rain_bone_flower', 'ink_mongoose', 'running_brush', 'boss_wuxianghuang'], color: 0x6f3a8b },
-        { id: 'hexi_dream', name: '河西梦境', kind: '野外BOSS区域', region: '绣金楼', x: 0.00, z: -0.82, radius: 210, maxActive: 18, types: ['yutu_bird', 'bone_flower', 'rain_bone_flower', 'lost_post_boat', 'golden_ou_bird', 'boshan_camel', 'boss_guoxin', 'boss_wucan', 'boss_zhenguanhou', 'boss_yuezhongshi', 'boss_weimaonv', 'boss_tianlu'], color: 0x9c5b2f },
-        { id: 'tianxing_mechanism', name: '天陉机关野地', kind: '野外BOSS区域', region: '太原盆地', x: -0.56, z: 0.12, radius: 190, maxActive: 18, types: ['zhuoyuan', 'wooden_ox', 'wooden_mantis', 'small_wooden_ox', 'earth_walker', 'wind_crossbow', 'wooden_viper', 'boss_wushi_brothers'], color: 0x9c5b2f }
+        { id: 'foye_camp', name: '佛爷寨', kind: '据点营地', region: '开封城', x: -0.08, z: 0.72, radius: 150, maxActive: 3, types: ['bandit_grunt', 'bandit_brute', 'bandit_adviser', 'stupid_thief'], color: 0xb23d32 },
+        { id: 'longhu_camp', name: '龙虎寨', kind: '据点营地', region: '燕南', x: 0.08, z: 0.42, radius: 145, maxActive: 3, types: ['bandit_grunt', 'thief', 'bandit_brute'], color: 0xb23d32 },
+        { id: 'jiurou_camp', name: '酒肉山林', kind: '据点营地', region: '荆楚', x: -0.58, z: -0.22, radius: 150, maxActive: 3, types: ['bandit_grunt', 'thief', 'bandit_adviser'], color: 0xb23d32 },
+        { id: 'kumu_pass', name: '枯木隘', kind: '据点营地', region: '大巴山', x: -0.56, z: -0.52, radius: 155, maxActive: 3, types: ['bandit_grunt', 'bandit_brute', 'sand_worm'], color: 0xb23d32 },
+        { id: 'northeast_forest_boss', name: '不见山东北山林', kind: '野外BOSS区域', region: '雁门关', x: 0.64, z: 0.52, radius: 180, maxActive: 1, types: ['fire_wolf', 'boss_xiaoxiaoba', 'boss_sinan_swordsman'], color: 0x9c5b2f },
+        { id: 'southwest_valley_boss', name: '不见山西南山谷', kind: '野外BOSS区域', region: '汉中盆地', x: -0.08, z: -0.30, radius: 175, maxActive: 1, types: ['boar_king', 'boss_xunxin', 'boss_tianying'], color: 0x9c5b2f },
+        { id: 'east_jungle_boss', name: '不见山东部丛林', kind: '野外BOSS区域', region: '南唐', x: 0.64, z: -0.50, radius: 175, maxActive: 1, types: ['shadow_panther', 'boss_yidao', 'boss_jiangwulang'], color: 0x9c5b2f },
+        { id: 'north_icefield_boss', name: '不见山北部冰原', kind: '野外BOSS区域', region: '雁门关', x: 0.48, z: 0.62, radius: 170, maxActive: 1, types: ['frost_bear', 'boss_white_wolf_lord'], color: 0x9c5b2f },
+        { id: 'xuanhe_dungeon', name: '悬河之墟地窟', kind: '地窟副本', region: '杭州城', x: 0.50, z: 0.04, radius: 135, maxActive: 3, types: ['bandit_adviser', 'lost_post_boat', 'golden_ou_bird'], color: 0x6f3a8b },
+        { id: 'tiangong_dungeon', name: '天工地窟', kind: '地窟副本', region: '太湖', x: 0.50, z: -0.26, radius: 135, maxActive: 3, types: ['bandit_brute', 'bone_flower', 'ink_mongoose'], color: 0x6f3a8b },
+        { id: 'hexi_dream', name: '河西梦境', kind: '野外BOSS区域', region: '绣金楼', x: 0.00, z: -0.82, radius: 210, maxActive: 2, types: ['yutu_bird', 'boshan_camel', 'boss_tianlu'], color: 0x9c5b2f },
+        { id: 'tianxing_mechanism', name: '天陉机关野地', kind: '野外BOSS区域', region: '太原盆地', x: -0.56, z: 0.12, radius: 190, maxActive: 2, types: ['wooden_ox', 'wooden_mantis', 'boss_wushi_brothers'], color: 0x9c5b2f }
       ],
       collectibles: [
         '毒蛙', '毒精', '金刀铁翼螂', '匕见将军', '细语蜂窝', '悼月金蟾', '三更夜磨子', '刺猬', '獐', '知了猴'
@@ -1734,12 +1731,21 @@
 
     function getCurrentMonsterArea() {
       return MONSTER_DEFINITION.spawnAreas.find(area => {
-        const centerX = area.x * WORLD_HALF_X;
-        const centerZ = area.z * WORLD_HALF_Z;
-        const dx = player.pos.x - centerX;
-        const dz = player.pos.z - centerZ;
-        return Math.sqrt(dx * dx + dz * dz) <= area.radius;
+        return isPlayerInsideMonsterArea(area);
       }) || null;
+    }
+
+    function getMonsterAreaById(id) {
+      return MONSTER_DEFINITION.spawnAreas.find(area => area.id === id) || null;
+    }
+
+    function isPlayerInsideMonsterArea(area) {
+      if (!area) return false;
+      const centerX = area.x * WORLD_HALF_X;
+      const centerZ = area.z * WORLD_HALF_Z;
+      const dx = player.pos.x - centerX;
+      const dz = player.pos.z - centerZ;
+      return Math.sqrt(dx * dx + dz * dz) <= area.radius;
     }
 
     function updateDayNight(dt) {
@@ -2055,7 +2061,36 @@
         const animal = animals.find(a => a.group === hitAnimal.object || a.group.children.includes(hitAnimal.object) || hitAnimal.object.parent === a.group);
         if (animal) return { kind: 'animal', entity: animal, distance: hitAnimal.distance };
       }
-      return null;
+      return getConeCombatTarget(maxDistance + 1.4);
+    }
+
+    function getConeCombatTarget(maxDistance) {
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      if (forward.lengthSq() < 0.001) return null;
+      forward.normalize();
+
+      let best = null;
+      const consider = (kind, entity, pos, radius) => {
+        const toTarget = new THREE.Vector3().subVectors(pos, player.pos);
+        toTarget.y = 0;
+        const dist = toTarget.length();
+        if (dist <= 0.001 || dist > maxDistance + radius) return;
+        const aim = toTarget.normalize().dot(forward);
+        const requiredAim = dist < 2.0 ? 0.34 : 0.52;
+        if (aim < requiredAim) return;
+        if (!best || dist < best.distance) best = { kind, entity, distance: dist };
+      };
+
+      for (const m of monsters) {
+        consider('monster', m, m.mesh.position, m.radius || 0.55);
+      }
+      for (const a of animals) {
+        if (a.dead) continue;
+        consider('animal', a, a.group.position, a.radius || 0.45);
+      }
+      return best;
     }
 
     function getNearestCombatTarget(maxDistance) {
@@ -2070,17 +2105,6 @@
         if (d <= maxDistance && (!best || d < best.distance)) best = { kind: 'animal', entity: a, distance: d };
       }
       return best;
-    }
-
-    function resolveMonsterFromHitObject(object) {
-      return monsters.find((monster) => {
-        let current = object;
-        while (current) {
-          if (current === monster.mesh) return true;
-          current = current.parent;
-        }
-        return false;
-      });
     }
 
     function firePlayerRangedWeapon(weapon) {
@@ -2196,22 +2220,21 @@
 
       // Monster hit first
       raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
-      const monsterMeshes = monsters.map(m => m.mesh);
-      const hitMonster = raycaster.intersectObjects(monsterMeshes, true)[0];
-      if (hitMonster && hitMonster.distance < 3) {
-        const target = resolveMonsterFromHitObject(hitMonster.object);
-        if (target) {
-          const dmg = getAttackDamage();
-          target.health -= dmg;
-          updateMonsterHealth(target);
-          if (target.type === 'creeper' && target.state !== 'fuse') {
-            target.state = 'fuse';
-            target.fuse = 1.4;
-            setMessage('苦力怕开始蓄力！', 1.2);
-          }
-          if (target.health <= 0) killMonster(target);
-          return;
+      const weapon = getCurrentWeapon();
+      const combatRange = weapon.kind === 'melee' ? Math.max(weapon.range || 3, 3.2) : 3.2;
+      const combatTarget = getFrontCombatTarget(combatRange);
+      if (combatTarget?.kind === 'monster') {
+        const target = combatTarget.entity;
+        const dmg = getAttackDamage();
+        target.health -= dmg;
+        updateMonsterHealth(target);
+        if (target.type === 'creeper' && target.state !== 'fuse') {
+          target.state = 'fuse';
+          target.fuse = 1.4;
+          setMessage('苦力怕开始蓄力！', 1.2);
         }
+        if (target.health <= 0) killMonster(target);
+        return;
       }
 
       // Then animals
@@ -3049,29 +3072,6 @@
       updateHotbar();
     }
 
-    function isCampArea(area) {
-      return area && area.kind === '据点营地';
-    }
-
-    function isPlayerInsideMonsterArea(area) {
-      if (!area) return false;
-      return getMonsterAreaCenter(area).distanceTo(player.pos) <= area.radius;
-    }
-
-    function getMonsterAreaById(areaId) {
-      return MONSTER_DEFINITION.spawnAreas.find(area => area.id === areaId) || null;
-    }
-
-    function isMonsterCampActive(monster) {
-      const area = getMonsterAreaById(monster.spawnAreaId);
-      if (!isCampArea(area)) return true;
-      return isPlayerInsideMonsterArea(area);
-    }
-
-    function getAreaMaxActive(area) {
-      return isCampArea(area) ? Math.min(area.maxActive, 3) : area.maxActive;
-    }
-
     function updateMonsters(dt) {
       for (let i = monsters.length - 1; i >= 0; i--) {
         const m = monsters[i];
@@ -3087,8 +3087,11 @@
         m.hpBg.lookAt(camera.position);
         m.hpFill.lookAt(camera.position);
         if (m.stun > 0) continue;
-        if (!isMonsterCampActive(m)) {
-          m.attackAnim = 0;
+
+        const homeArea = getMonsterAreaById(m.spawnAreaId);
+        const playerInHomeArea = homeArea ? isPlayerInsideMonsterArea(homeArea) : true;
+        if (!playerInHomeArea) {
+          m.state = 'guard';
           continue;
         }
 
@@ -3179,7 +3182,7 @@
         } else {
           let hitTarget = false;
           for (const m of monsters) {
-            if (p.mesh.position.distanceTo(m.mesh.position) < 0.95) {
+            if (p.mesh.position.distanceTo(m.mesh.position) < 1.8) {
               m.health -= p.damage || 22;
               updateMonsterHealth(m);
               if (m.health <= 0) killMonster(m);
@@ -3190,7 +3193,7 @@
           if (!hitTarget) {
             for (const a of animals) {
               if (a.dead) continue;
-              if (p.mesh.position.distanceTo(a.group.position) < 0.95) {
+              if (p.mesh.position.distanceTo(a.group.position) < 1.2) {
                 a.health -= p.damage || 22;
                 a.fleeTimer = 3.2;
                 updateAnimalHealth(a);
@@ -3231,7 +3234,6 @@
 
       const activeAreas = MONSTER_DEFINITION.spawnAreas.filter(area => {
         const center = getMonsterAreaCenter(area);
-        if (isCampArea(area)) return isPlayerInsideMonsterArea(area);
         return center.distanceTo(player.pos) < MONSTER_DEFINITION.activationRadius;
       });
       if (activeAreas.length === 0) return;
@@ -3242,7 +3244,7 @@
         while (
           spawnedCount < MONSTER_DEFINITION.spawnBatch &&
           monsters.length < MONSTER_DEFINITION.maxActive &&
-          monsters.filter(m => m.spawnAreaId === area.id).length < getAreaMaxActive(area)
+          monsters.filter(m => m.spawnAreaId === area.id).length < area.maxActive
         ) {
           if (spawnMonsterInArea(area)) spawnedCount++;
           else break;
@@ -3261,10 +3263,9 @@
         const config = MONSTER_DEFINITION.types[type] || {};
         if (config.boss && monsters.some(m => m.spawnAreaId === area.id && m.type === type)) continue;
         const angle = Math.random() * Math.PI * 2;
-        const nearPlayer = getMonsterAreaCenter(area).distanceTo(player.pos) < area.radius * 1.4;
-        const dist = nearPlayer ? 10 + Math.random() * 52 : area.radius * (0.18 + Math.random() * 0.72);
-        const centerX = nearPlayer ? player.pos.x : area.x * WORLD_HALF_X;
-        const centerZ = nearPlayer ? player.pos.z : area.z * WORLD_HALF_Z;
+        const dist = area.radius * (0.18 + Math.random() * 0.62);
+        const centerX = area.x * WORLD_HALF_X;
+        const centerZ = area.z * WORLD_HALF_Z;
         const x = centerX + Math.cos(angle) * dist;
         const z = centerZ + Math.sin(angle) * dist;
         const areaCenter = getMonsterAreaCenter(area);
