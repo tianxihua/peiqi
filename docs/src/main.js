@@ -15,7 +15,10 @@ const skinTabRifle = document.querySelector("#skin-tab-rifle");
 const skinTabPistol = document.querySelector("#skin-tab-pistol");
 const summaryOverlay = document.querySelector("#summary-overlay");
 const summaryText = document.querySelector("#summary-text");
-const summaryBoardBody = document.querySelector("#summary-board-body");
+const summaryFriendlyTitle = document.querySelector("#summary-friendly-title");
+const summaryEnemyTitle = document.querySelector("#summary-enemy-title");
+const summaryFriendlyBody = document.querySelector("#summary-friendly-body");
+const summaryEnemyBody = document.querySelector("#summary-enemy-body");
 const summaryContinueButton = document.querySelector("#summary-continue-button");
 const restartButton = document.querySelector("#restart-button");
 const exitSquadButton = document.querySelector("#exit-squad-button");
@@ -589,38 +592,52 @@ function buildMatchSummary() {
   return { rows, best };
 }
 
+function createSummaryRow(row, summary) {
+  const item = document.createElement("div");
+  item.className = "summary-board__row";
+  if (row.isPlayer) {
+    item.classList.add("is-player");
+  }
+  if (summary.best && row.id === summary.best.id) {
+    item.classList.add("is-best");
+  }
+
+  const cells = [
+    row.name,
+    formatRate(row.participationRate),
+    formatRate(row.tankRate),
+    formatRate(row.damageRate),
+    formatRate(row.killRate),
+  ];
+
+  cells.forEach((value, index) => {
+    const cell = document.createElement("span");
+    cell.textContent = value;
+    cell.className = index === 0 ? "summary-board__name" : "summary-board__value";
+    item.appendChild(cell);
+  });
+
+  return item;
+}
+
 function renderMatchSummary(summary, summaryNote) {
-  summaryBoardBody.innerHTML = "";
+  if (!summaryFriendlyTitle || !summaryEnemyTitle || !summaryFriendlyBody || !summaryEnemyBody) {
+    summaryText.textContent = summaryNote;
+    return;
+  }
+
+  const friendlyTeam = player.team;
+  const enemyTeam = friendlyTeam === "blue" ? "red" : "blue";
+  summaryFriendlyTitle.textContent = `我方 · ${TEAMS[friendlyTeam].name}`;
+  summaryEnemyTitle.textContent = `敌方 · ${TEAMS[enemyTeam].name}`;
+  summaryFriendlyTitle.style.color = TEAMS[friendlyTeam].color;
+  summaryEnemyTitle.style.color = TEAMS[enemyTeam].color;
+  summaryFriendlyBody.innerHTML = "";
+  summaryEnemyBody.innerHTML = "";
+
   for (const row of summary.rows) {
-    const item = document.createElement("div");
-    item.className = "summary-board__row";
-    if (row.isPlayer) {
-      item.classList.add("is-player");
-    }
-    if (summary.best && row.id === summary.best.id) {
-      item.classList.add("is-best");
-    }
-
-    const teamLabel = row.team === "blue" ? "渡鸦" : "阿特拉斯";
-    const cells = [
-      row.name,
-      teamLabel,
-      formatRate(row.participationRate),
-      formatRate(row.tankRate),
-      formatRate(row.damageRate),
-      formatRate(row.killRate),
-    ];
-
-    cells.forEach((value, index) => {
-      const cell = document.createElement("span");
-      cell.textContent = value;
-      cell.className = index === 0 ? "summary-board__name" : index === 1 ? "summary-board__team" : "summary-board__value";
-      if (index === 1) {
-        cell.style.color = TEAMS[row.team].color;
-      }
-      item.appendChild(cell);
-    });
-    summaryBoardBody.appendChild(item);
+    const targetBody = row.team === friendlyTeam ? summaryFriendlyBody : summaryEnemyBody;
+    targetBody.appendChild(createSummaryRow(row, summary));
   }
   summaryText.textContent = summaryNote;
 }
@@ -3559,10 +3576,21 @@ renderChatMessages();
 loginNameInput.focus();
 
 let last = performance.now();
+let loopErrorCooldown = 0;
 function loop(now) {
   const delta = Math.min(0.033, (now - last) / 1000);
   last = now;
-  tick(delta);
-  requestAnimationFrame(loop);
+  try {
+    tick(delta);
+  } catch (error) {
+    if (loopErrorCooldown <= 0) {
+      console.error("Game loop recovered after an error:", error);
+      promptText.textContent = "检测到一次战场数据异常，已自动恢复。";
+      loopErrorCooldown = 1.5;
+    }
+  } finally {
+    loopErrorCooldown = Math.max(0, loopErrorCooldown - delta);
+    requestAnimationFrame(loop);
+  }
 }
 requestAnimationFrame(loop);
