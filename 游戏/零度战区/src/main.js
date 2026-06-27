@@ -333,6 +333,7 @@ let chatOpen = false;
 let squadCommand = null;
 let chatAnnounceCooldown = 0;
 let activeSkinCategory = "rifle";
+let skinRenderToken = 0;
 const participantLookup = new Map();
 
 const player = {
@@ -1033,14 +1034,20 @@ async function renderSkinSelection() {
     return;
   }
 
-  skinTabRifle.classList.toggle("is-active", activeSkinCategory === "rifle");
-  skinTabPistol.classList.toggle("is-active", activeSkinCategory === "pistol");
+  const category = activeSkinCategory;
+  const renderToken = ++skinRenderToken;
+  skinTabRifle.classList.toggle("is-active", category === "rifle");
+  skinTabPistol.classList.toggle("is-active", category === "pistol");
   skinGrid.innerHTML = "";
 
-  const unlockedSkins = getUnlockedSkins(activeSkinCategory);
-  const selectedId = getSelectedSkinId(activeSkinCategory);
+  const unlockedSkins = getUnlockedSkins(category);
+  const selectedId = getSelectedSkinId(category);
 
   for (const skin of unlockedSkins) {
+    if (renderToken !== skinRenderToken || category !== activeSkinCategory) {
+      return;
+    }
+
     const card = document.createElement("button");
     card.type = "button";
     card.className = "skin-card";
@@ -1056,6 +1063,9 @@ async function renderSkinSelection() {
       img.decoding = "async";
       img.loading = "eager";
       img.src = await getSkinThumbDataUrl(skin);
+      if (renderToken !== skinRenderToken || category !== activeSkinCategory) {
+        return;
+      }
       thumb.appendChild(img);
     } catch {
       thumb.style.background = "rgba(255, 255, 255, 0.05)";
@@ -1070,10 +1080,10 @@ async function renderSkinSelection() {
         return;
       }
       ensureAccountCosmetics(accounts[currentAccount]);
-      accounts[currentAccount].selectedSkins[activeSkinCategory] = skin.id;
+      accounts[currentAccount].selectedSkins[category] = skin.id;
       saveAccounts();
       renderSkinSelection();
-      setMenuNote(`已选择${activeSkinCategory === "rifle" ? "突击步枪" : "小手枪"}皮肤：${skin.name}。`);
+      setMenuNote(`已选择${category === "rifle" ? "突击步枪" : "小手枪"}皮肤：${skin.name}。`);
     });
     skinGrid.appendChild(card);
   }
