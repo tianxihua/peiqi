@@ -320,6 +320,11 @@ const HEALTH_COLORS = {
   enemy: "#ff6258",
 };
 
+const PROJECTILE_COLORS = {
+  friendly: "#45b8ff",
+  enemy: "#ff3f35",
+};
+
 const game = {
   running: false,
   ended: false,
@@ -2562,7 +2567,7 @@ function updateHud() {
   waveCount.textContent = `${enemyLeft}`;
   timerCount.textContent = `${Math.max(0, Math.ceil(game.timer))}`;
   teamName.textContent = TEAMS[player.team].name;
-  teamName.style.color = TEAMS[player.team].color;
+  teamName.style.color = "#ffffff";
   const rankLabel = rankCount.previousElementSibling;
   const badgeLabel = rankBadge.previousElementSibling;
   const winsLabel = winCount.previousElementSibling;
@@ -3302,6 +3307,10 @@ function getUnitHealthColor(sprite) {
   return sprite.friendly ? HEALTH_COLORS.friendly : HEALTH_COLORS.enemy;
 }
 
+function getProjectileColor(team) {
+  return isFriendlyTeam(team, player.team) ? PROJECTILE_COLORS.friendly : PROJECTILE_COLORS.enemy;
+}
+
 function drawPixelSoldierSprite(sprite, screenX, y, size) {
   const accent = sprite.friendly ? HEALTH_COLORS.friendly : HEALTH_COLORS.enemy;
   const accentShadow = sprite.friendly ? "#1c6d8f" : "#8b241e";
@@ -3468,7 +3477,7 @@ function renderSprites() {
     const dist = Math.hypot(dx, dy);
     const rel = normalizeAngle(Math.atan2(dy, dx) - player.angle);
     if (Math.abs(rel) > fov) continue;
-    sprites.push({ type: "projectile", x: p.x, y: p.y, dist, rel, color: TEAMS[p.team].muzzle });
+    sprites.push({ type: "projectile", x: p.x, y: p.y, dist, rel, color: getProjectileColor(p.team) });
   }
 
   sprites.sort((a, b) => b.dist - a.dist);
