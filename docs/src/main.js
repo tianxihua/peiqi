@@ -69,6 +69,11 @@ const ACCOUNTS_STORAGE_KEY = "delta-fps-accounts";
 const PROGRESSION_STORAGE_KEY = "delta-fps-rank-progression";
 const CHAT_STORAGE_KEY = "delta-fps-public-chat";
 const MAX_CHAT_MESSAGES = 5;
+const ONLINE_CONFIG = window.DELTA_ONLINE_CONFIG ?? {};
+const ONLINE_DB_URL = String(ONLINE_CONFIG.firebaseDatabaseUrl ?? "").replace(/\/+$/, "");
+const ONLINE_AUTH = String(ONLINE_CONFIG.firebaseAuthToken ?? "");
+const ONLINE_REQUEST_TIMEOUT = 8000;
+const onlineEnabled = /^https:\/\/.+\.firebaseio\.com$|^https:\/\/.+\.firebasedatabase\.app$/.test(ONLINE_DB_URL);
 const SKIN_SHEET_PATHS = {
   pistol: "./assets/skins/pistol-sheet.png",
   rifle: "./assets/skins/rifle-sheet.png",
@@ -309,6 +314,12 @@ const TEAMS = {
   },
 };
 
+const HEALTH_COLORS = {
+  player: "#63f08f",
+  friendly: "#63c7ff",
+  enemy: "#ff6258",
+};
+
 const game = {
   running: false,
   ended: false,
@@ -400,11 +411,131 @@ function loadChatMessages() {
   }
 }
 
-function saveChatMessages() {
+async function hashPassword(name, password) {
+  const normalized = `${normalizeAccountName(name).toLowerCase()}:${password}`;
+  if (window.crypto?.subtle) {
+    const bytes = new TextEncoder().encode(normalized);
+    const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  let hash = 0;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash = (Math.imul(31, hash) + normalized.charCodeAt(index)) | 0;
+  }
+  return `fallback-${Math.abs(hash)}`;
+}
+
+function toFirebaseKey(value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function getOnlineUrl(path) {
+  const auth = ONLINE_AUTH ? `?auth=${encodeURIComponent(ONLINE_AUTH)}` : "";
+  return `${ONLINE_DB_URL}/${path}.json${auth}`;
+}
+
+async function requestOnline(path, options = {}) {
+  if (!onlineEnabled) {
+    throw new Error("Online database is not configured.");
+  }
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), ONLINE_REQUEST_TIMEOUT);
+  try {
+    const response = await fetch(getOnlineUrl(path), {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers ?? {}),
+      },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Online request failed: ${response.status}`);
+    }
+    return await response.json();
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function normalizeAccountRecord(account) {
+  if (!account || typeof account !== "object") {
+    return null;
+  }
+  const normalized = {
+    passwordHash: typeof account.passwordHash === "string" ? account.passwordHash : "",
+    password: typeof account.password === "string" ? account.password : "",
+    wins: Math.max(0, Number(account.wins) || 0),
+    selectedSkins: account.selectedSkins && typeof account.selectedSkins === "object"
+      ? {
+        rifle: account.selectedSkins.rifle ?? "rifle-1",
+        pistol: account.selectedSkins.pistol ?? "pistol-1",
+      }
+      : { rifle: "rifle-1", pistol: "pistol-1" },
+    updatedAt: Number(account.updatedAt) || Date.now(),
+  };
+  return normalized;
+}
+
+async function fetchOnlineAccount(name) {
+  const account = normalizeAccountRecord(await requestOnline(`accounts/${toFirebaseKey(name)}`));
+  if (account) {
+    accounts[name] = account;
+  }
+  return account;
+}
+
+async function saveOnlineAccount(name, account) {
+  const payload = {
+    passwordHash: account.passwordHash,
+    wins: Math.max(0, Number(account.wins) || 0),
+    selectedSkins: account.selectedSkins ?? { rifle: "rifle-1", pistol: "pistol-1" },
+    updatedAt: Date.now(),
+  };
+  await requestOnline(`accounts/${toFirebaseKey(name)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  accounts[name] = payload;
+}
+
+async function createOnlineAccount(name, account) {
+  const existingAccount = await fetchOnlineAccount(name);
+  if (existingAccount) {
+    return false;
+  }
+  await saveOnlineAccount(name, account);
+  return true;
+}
+
+function persistLocalAccounts() {
+  try {
+    window.localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+  } catch {
+    // Ignore storage failures and keep in-memory accounts.
+  }
+}
+
+async function saveChatMessages() {
   try {
     window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(publicChat.slice(-MAX_CHAT_MESSAGES)));
   } catch {
     // Ignore storage failures and keep chat only in memory.
+  }
+  if (onlineEnabled) {
+    try {
+      await requestOnline("chat/public", {
+        method: "PUT",
+        body: JSON.stringify(publicChat.slice(-MAX_CHAT_MESSAGES)),
+      });
+    } catch {
+      chatStatus.textContent = "公共频道暂时无法同步";
+    }
   }
 }
 
@@ -415,11 +546,7 @@ function clearChatMessages() {
 }
 
 function saveAccounts() {
-  try {
-    window.localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
-  } catch {
-    // Ignore storage failures and keep in-memory accounts.
-  }
+  persistLocalAccounts();
 }
 
 function getAccountRecord(name) {
@@ -443,18 +570,58 @@ function loadProgressionForAccount(name) {
   progression.wins = Math.max(0, Number(account?.wins) || 0);
 }
 
-function saveProgression() {
+async function saveProgression() {
   if (!currentAccount || !accounts[currentAccount]) {
     return;
   }
   ensureAccountCosmetics(accounts[currentAccount]);
   accounts[currentAccount].wins = progression.wins;
   saveAccounts();
+  if (onlineEnabled) {
+    try {
+      await saveOnlineAccount(currentAccount, accounts[currentAccount]);
+    } catch {
+      setMenuNote("本局胜场已保存在当前设备，但联网同步失败。请检查数据库配置或网络。");
+    }
+  }
 }
 
 function setLoginMessage(message, isError = false) {
   loginMessage.textContent = message;
   loginMessage.style.color = isError ? "#ff8c8c" : "";
+}
+
+function setAuthBusy(isBusy) {
+  loginButton.disabled = isBusy;
+  registerButton.disabled = isBusy;
+  loginNameInput.disabled = isBusy;
+  loginPasswordInput.disabled = isBusy;
+}
+
+function updateLoginModeMessage() {
+  if (onlineEnabled) {
+    setLoginMessage("联网账号已启用。输入名称和密码后登录，或先注册一个新账号。");
+  } else {
+    setLoginMessage("还没有填写 Firebase 数据库地址，目前仍是本地账号模式。", true);
+  }
+}
+
+async function loadOnlineChatMessages() {
+  if (!onlineEnabled) {
+    return;
+  }
+  try {
+    const remoteChat = await requestOnline("chat/public");
+    if (Array.isArray(remoteChat)) {
+      publicChat.length = 0;
+      publicChat.push(...remoteChat
+        .filter((entry) => entry && typeof entry.author === "string" && typeof entry.message === "string")
+        .slice(-MAX_CHAT_MESSAGES));
+      renderChatMessages();
+    }
+  } catch {
+    chatStatus.textContent = "公共频道暂时无法同步";
+  }
 }
 
 function formatChatTime(timestamp) {
@@ -814,9 +981,10 @@ function completeLogin(name) {
   accountName.textContent = name;
   loginOverlay.classList.remove("overlay--active");
   startOverlay.classList.add("overlay--active");
-  setMenuNote(`欢迎回来，${name}。点击“排位赛”开始正式对局，或进入练习场热身。`);
+  setMenuNote(`欢迎回来，${name}。${onlineEnabled ? "账号数据已联网同步。" : "当前仍是本地账号模式。"}点击“排位赛”开始正式对局，或进入练习场热身。`);
   setLoginMessage("登录成功。");
   renderChatMessages();
+  loadOnlineChatMessages();
   updateHud();
 }
 
@@ -824,7 +992,7 @@ function normalizeAccountName(value) {
   return value.trim();
 }
 
-function handleLogin() {
+async function handleLogin() {
   const name = normalizeAccountName(loginNameInput.value);
   const password = loginPasswordInput.value;
   if (!name || !password) {
@@ -832,34 +1000,74 @@ function handleLogin() {
     return;
   }
 
-  const account = getAccountRecord(name);
-  if (!account || account.password !== password) {
-    setLoginMessage("名称或密码错误。", true);
-    return;
-  }
+  setAuthBusy(true);
+  setLoginMessage(onlineEnabled ? "正在联网登录..." : "正在登录本地账号...");
+  try {
+    const account = onlineEnabled ? await fetchOnlineAccount(name) : getAccountRecord(name);
+    const passwordHash = await hashPassword(name, password);
+    const passwordMatches = account?.passwordHash
+      ? account.passwordHash === passwordHash
+      : account?.password === password;
+    if (!account || !passwordMatches) {
+      setLoginMessage("名称或密码错误。", true);
+      return;
+    }
 
-  completeLogin(name);
+    if (!account.passwordHash) {
+      account.passwordHash = passwordHash;
+      delete account.password;
+      if (onlineEnabled) {
+        await saveOnlineAccount(name, account);
+      }
+      saveAccounts();
+    }
+    completeLogin(name);
+  } catch {
+    setLoginMessage("联网登录失败，请检查数据库配置或网络。", true);
+  } finally {
+    setAuthBusy(false);
+  }
 }
 
-function handleRegister() {
+async function handleRegister() {
   const name = normalizeAccountName(loginNameInput.value);
   const password = loginPasswordInput.value;
   if (!name || !password) {
     setLoginMessage("注册前请先输入名称和密码。", true);
     return;
   }
-  if (accounts[name]) {
-    setLoginMessage("这个名称已经存在，请换一个。", true);
-    return;
-  }
 
-  accounts[name] = {
-    password,
-    wins: 0,
-    selectedSkins: { rifle: "rifle-1", pistol: "pistol-1" },
-  };
-  saveAccounts();
-  completeLogin(name);
+  setAuthBusy(true);
+  setLoginMessage(onlineEnabled ? "正在联网注册..." : "正在注册本地账号...");
+  try {
+    const existingAccount = onlineEnabled ? await fetchOnlineAccount(name) : getAccountRecord(name);
+    if (existingAccount) {
+      setLoginMessage("您的名称已重名，请换一个", true);
+      return;
+    }
+
+    const account = {
+      passwordHash: await hashPassword(name, password),
+      wins: 0,
+      selectedSkins: { rifle: "rifle-1", pistol: "pistol-1" },
+      updatedAt: Date.now(),
+    };
+    accounts[name] = account;
+    if (onlineEnabled) {
+      const created = await createOnlineAccount(name, account);
+      if (!created) {
+        delete accounts[name];
+        setLoginMessage("您的名称已重名，请换一个", true);
+        return;
+      }
+    }
+    saveAccounts();
+    completeLogin(name);
+  } catch {
+    setLoginMessage("联网注册失败，请检查数据库配置或网络。", true);
+  } finally {
+    setAuthBusy(false);
+  }
 }
 
 function getUnlockedSkinCount(category) {
@@ -1082,6 +1290,11 @@ async function renderSkinSelection() {
       ensureAccountCosmetics(accounts[currentAccount]);
       accounts[currentAccount].selectedSkins[category] = skin.id;
       saveAccounts();
+      if (onlineEnabled) {
+        saveOnlineAccount(currentAccount, accounts[currentAccount]).catch(() => {
+          setMenuNote("皮肤已保存在当前设备，但联网同步失败。请检查数据库配置或网络。");
+        });
+      }
       renderSkinSelection();
       setMenuNote(`已选择${category === "rifle" ? "突击步枪" : "小手枪"}皮肤：${skin.name}。`);
     });
@@ -3084,6 +3297,134 @@ function renderWalls() {
   }
 }
 
+function getUnitHealthColor(sprite) {
+  if (sprite.isPlayer) return HEALTH_COLORS.player;
+  return sprite.friendly ? HEALTH_COLORS.friendly : HEALTH_COLORS.enemy;
+}
+
+function drawPixelSoldierSprite(sprite, screenX, y, size) {
+  const accent = sprite.friendly ? HEALTH_COLORS.friendly : HEALTH_COLORS.enemy;
+  const accentShadow = sprite.friendly ? "#1c6d8f" : "#8b241e";
+  const bodyTilt = sprite.hurtTilt * 0.16;
+  const downed = sprite.downed;
+
+  ctx.save();
+  ctx.translate(screenX, y + size * 0.42);
+  ctx.rotate(downed ? Math.PI * 0.48 : bodyTilt);
+  ctx.imageSmoothingEnabled = false;
+
+  const w = size;
+  const outline = "rgba(3, 5, 4, 0.82)";
+  const camoDark = "#263a29";
+  const camoMid = "#4c6842";
+  const camoLight = "#7f986b";
+  const vest = "#5d5133";
+  const vestDark = "#332c1f";
+  const skin = "#efc4a6";
+  const gun = "#111922";
+  const gunMid = "#334452";
+  const metal = "#8a9aa2";
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+  ctx.fillRect(-w * 0.32, w * 0.42, w * 0.64, w * 0.07);
+
+  ctx.fillStyle = outline;
+  ctx.fillRect(-w * 0.24, -w * 0.18, w * 0.48, w * 0.56);
+  ctx.fillRect(-w * 0.18, w * 0.32, w * 0.13, w * 0.28);
+  ctx.fillRect(w * 0.06, w * 0.32, w * 0.13, w * 0.28);
+
+  ctx.fillStyle = camoDark;
+  ctx.fillRect(-w * 0.16, w * 0.30, w * 0.11, w * 0.25);
+  ctx.fillRect(w * 0.06, w * 0.30, w * 0.11, w * 0.25);
+  ctx.fillStyle = camoMid;
+  ctx.fillRect(-w * 0.15, w * 0.34, w * 0.05, w * 0.08);
+  ctx.fillRect(w * 0.11, w * 0.38, w * 0.05, w * 0.08);
+  ctx.fillStyle = "#151915";
+  ctx.fillRect(-w * 0.2, w * 0.56, w * 0.16, w * 0.07);
+  ctx.fillRect(w * 0.04, w * 0.56, w * 0.16, w * 0.07);
+
+  ctx.fillStyle = camoMid;
+  ctx.fillRect(-w * 0.2, -w * 0.12, w * 0.4, w * 0.46);
+  ctx.fillStyle = camoLight;
+  ctx.fillRect(-w * 0.16, -w * 0.08, w * 0.12, w * 0.08);
+  ctx.fillRect(w * 0.05, w * 0.04, w * 0.12, w * 0.07);
+  ctx.fillStyle = camoDark;
+  ctx.fillRect(-w * 0.18, w * 0.06, w * 0.1, w * 0.08);
+  ctx.fillRect(w * 0.02, -w * 0.12, w * 0.12, w * 0.07);
+
+  ctx.fillStyle = vest;
+  ctx.fillRect(-w * 0.14, -w * 0.06, w * 0.28, w * 0.36);
+  ctx.fillStyle = vestDark;
+  ctx.fillRect(-w * 0.04, -w * 0.05, w * 0.08, w * 0.34);
+  ctx.fillRect(-w * 0.12, w * 0.18, w * 0.24, w * 0.05);
+  ctx.fillStyle = accent;
+  ctx.fillRect(-w * 0.11, w * 0.01, w * 0.22, w * 0.035);
+  ctx.fillStyle = accentShadow;
+  ctx.fillRect(-w * 0.11, w * 0.04, w * 0.22, w * 0.018);
+
+  ctx.fillStyle = camoMid;
+  ctx.fillRect(-w * 0.34, -w * 0.06, w * 0.16, w * 0.26);
+  ctx.fillRect(w * 0.18, -w * 0.06, w * 0.16, w * 0.26);
+  ctx.fillStyle = accent;
+  ctx.fillRect(-w * 0.32, -w * 0.02, w * 0.07, w * 0.035);
+  ctx.fillRect(w * 0.25, -w * 0.02, w * 0.07, w * 0.035);
+  ctx.fillStyle = skin;
+  ctx.fillRect(-w * 0.28, w * 0.14, w * 0.08, w * 0.08);
+  ctx.fillRect(w * 0.2, w * 0.14, w * 0.08, w * 0.08);
+
+  ctx.save();
+  ctx.rotate(-0.08);
+  ctx.fillStyle = outline;
+  ctx.fillRect(-w * 0.31, -w * 0.03, w * 0.62, w * 0.1);
+  ctx.fillStyle = gun;
+  ctx.fillRect(-w * 0.29, -w * 0.015, w * 0.58, w * 0.07);
+  ctx.fillStyle = gunMid;
+  ctx.fillRect(-w * 0.18, -w * 0.045, w * 0.16, w * 0.045);
+  ctx.fillRect(w * 0.12, w * 0.045, w * 0.09, w * 0.11);
+  ctx.fillStyle = metal;
+  ctx.fillRect(w * 0.27, 0, w * 0.18, w * 0.025);
+  ctx.fillStyle = "#0a0d10";
+  ctx.fillRect(-w * 0.06, w * 0.05, w * 0.09, w * 0.2);
+  ctx.restore();
+
+  if (!downed && sprite.muzzleFlash > 0) {
+    ctx.strokeStyle = `rgba(255, 255, 255, ${sprite.muzzleFlash * 0.82})`;
+    ctx.lineWidth = Math.max(2, w * 0.035);
+    ctx.beginPath();
+    ctx.moveTo(w * 0.34, 0);
+    ctx.lineTo(w * 0.55, -w * 0.02);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = outline;
+  ctx.fillRect(-w * 0.16, -w * 0.44, w * 0.32, w * 0.28);
+  ctx.fillStyle = skin;
+  ctx.fillRect(-w * 0.11, -w * 0.34, w * 0.22, w * 0.17);
+  ctx.fillStyle = "#1b1715";
+  ctx.fillRect(-w * 0.08, -w * 0.27, w * 0.05, w * 0.025);
+  ctx.fillRect(w * 0.04, -w * 0.27, w * 0.05, w * 0.025);
+  ctx.fillRect(-w * 0.04, -w * 0.2, w * 0.08, w * 0.018);
+
+  ctx.fillStyle = camoDark;
+  ctx.fillRect(-w * 0.18, -w * 0.47, w * 0.36, w * 0.15);
+  ctx.fillRect(-w * 0.14, -w * 0.52, w * 0.28, w * 0.08);
+  ctx.fillStyle = camoLight;
+  ctx.fillRect(-w * 0.09, -w * 0.49, w * 0.18, w * 0.035);
+  ctx.fillStyle = accent;
+  ctx.fillRect(-w * 0.035, -w * 0.485, w * 0.07, w * 0.045);
+  ctx.strokeStyle = outline;
+  ctx.lineWidth = Math.max(1, w * 0.014);
+  ctx.strokeRect(-w * 0.035, -w * 0.485, w * 0.07, w * 0.045);
+
+  if (sprite.flash > 0) {
+    ctx.strokeStyle = `rgba(255, 240, 180, ${sprite.flash * 0.9})`;
+    ctx.lineWidth = Math.max(2, w * 0.03);
+    ctx.strokeRect(-w * 0.36, -w * 0.54, w * 0.72, w * 1.12);
+  }
+
+  ctx.restore();
+}
+
 function renderSprites() {
   const sprites = [];
   const fov = player.fov;
@@ -3113,6 +3454,7 @@ function renderSprites() {
       muzzleFlash: unit.muzzleFlash,
       teamColor: teamStyle.color,
       teamBright: teamStyle.bright,
+      healthColor: friendly ? HEALTH_COLORS.friendly : HEALTH_COLORS.enemy,
       downed: unit.downed,
       role: unit.role,
       reviveProgress: unit.reviveProgress,
@@ -3142,31 +3484,7 @@ function renderSprites() {
 
     ctx.fillStyle = sprite.color;
     if (sprite.type === "unit") {
-      const bodyTilt = sprite.hurtTilt * 0.16;
-      ctx.save();
-      ctx.translate(screenX, y + size * 0.42);
-      ctx.rotate(sprite.downed ? Math.PI * 0.48 : bodyTilt);
-      ctx.fillRect(-size * 0.22, -size * 0.2, size * 0.44, sprite.downed ? size * 0.24 : size * 0.55);
-      ctx.beginPath();
-      ctx.arc(0, sprite.downed ? -size * 0.02 : -size * 0.26, size * 0.14, 0, Math.PI * 2);
-      ctx.fillStyle = "#f0d7c9";
-      ctx.fill();
-      ctx.fillStyle = sprite.color;
-      ctx.fillRect(-size * 0.28, -size * 0.04, size * 0.56, size * 0.08);
-      if (sprite.flash > 0) {
-        ctx.strokeStyle = `rgba(255, 240, 180, ${sprite.flash * 0.9})`;
-        ctx.lineWidth = Math.max(2, size * 0.03);
-        ctx.strokeRect(-size * 0.28, -size * 0.3, size * 0.56, size * 0.72);
-      }
-      if (!sprite.downed && sprite.muzzleFlash > 0) {
-        ctx.strokeStyle = `rgba(255,255,255,${sprite.muzzleFlash * 0.8})`;
-        ctx.lineWidth = Math.max(2, size * 0.04);
-        ctx.beginPath();
-        ctx.moveTo(size * 0.24, -size * 0.02);
-        ctx.lineTo(size * 0.46, -size * 0.02);
-        ctx.stroke();
-      }
-      ctx.restore();
+      drawPixelSoldierSprite(sprite, screenX, y, size);
 
       const healthRatio = Math.max(0, sprite.health / 100);
       const barWidth = Math.max(34, size * 0.54);
@@ -3180,17 +3498,17 @@ function renderSprites() {
       ctx.strokeRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
       ctx.fillStyle = "rgba(22, 28, 31, 0.95)";
       ctx.fillRect(barX, barY, barWidth, barHeight);
-      ctx.fillStyle = sprite.teamColor;
+      ctx.fillStyle = getUnitHealthColor(sprite);
       ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
-      ctx.fillStyle = sprite.friendly ? sprite.teamBright : "#ffd8cf";
+      ctx.fillStyle = sprite.friendly ? HEALTH_COLORS.friendly : HEALTH_COLORS.enemy;
       ctx.font = `${Math.max(10, size * 0.1)}px sans-serif`;
       ctx.textAlign = "center";
       const tag = sprite.downed ? "DOWNED" : (sprite.friendly ? sprite.role.toUpperCase() : "HOSTILE");
       ctx.fillText(tag, screenX, barY - 8);
       if (sprite.downed) {
-        ctx.strokeStyle = sprite.teamBright;
+        ctx.strokeStyle = getUnitHealthColor(sprite);
         ctx.strokeRect(barX, barY + barHeight + 6, barWidth, 6);
-        ctx.fillStyle = sprite.teamBright;
+        ctx.fillStyle = getUnitHealthColor(sprite);
         ctx.fillRect(barX, barY + barHeight + 6, barWidth * Math.min(1, sprite.reviveProgress / 1.6), 6);
       }
     } else {
@@ -3583,6 +3901,8 @@ chatSend.addEventListener("click", submitChatMessage);
 resize();
 updateHud();
 renderChatMessages();
+updateLoginModeMessage();
+loadOnlineChatMessages();
 loginNameInput.focus();
 
 let last = performance.now();
