@@ -1558,6 +1558,24 @@ function switchWeaponSlot(target, slotIndex) {
   return true;
 }
 
+function slotHasAnyAmmo(slot) {
+  return Boolean(slot && ((slot.ammo ?? 0) > 0 || (slot.reserveAmmo ?? 0) > 0));
+}
+
+function findUsableWeaponSlot(target) {
+  if (!target.weaponSlots) {
+    return -1;
+  }
+  const activeSlot = target.activeWeaponSlot ?? 0;
+  for (let offset = 1; offset <= target.weaponSlots.length; offset += 1) {
+    const slotIndex = (activeSlot + offset) % target.weaponSlots.length;
+    if (slotIndex !== activeSlot && slotHasAnyAmmo(target.weaponSlots[slotIndex])) {
+      return slotIndex;
+    }
+  }
+  return slotHasAnyAmmo(target.weaponSlots[activeSlot]) ? activeSlot : -1;
+}
+
 function togglePlayerWeapon() {
   if (!player.alive || !game.running) {
     return;
@@ -2601,19 +2619,60 @@ function updateHud() {
   chatSend.disabled = !currentAccount;
 }
 
-function beginReload() {
-  if (player.reloadTimer > 0 || player.ammo > 0 || player.reserveAmmo <= 0) {
-    return;
+function beginReload(target = player) {
+  if (target.reloadTimer > 0 || target.ammo > 0 || target.reserveAmmo <= 0) {
+    return false;
   }
-  player.reloadTimer = player.reloadTime;
+  target.reloadTimer = target.reloadTime;
+  syncActiveWeaponToSlot(target);
+  return true;
 }
 
-function finishReload() {
-  const need = player.magSize - player.ammo;
-  const amount = Math.min(need, player.reserveAmmo);
-  player.ammo += amount;
-  player.reserveAmmo -= amount;
-  syncActiveWeaponToSlot(player);
+function finishReload(target = player) {
+  const need = target.magSize - target.ammo;
+  const amount = Math.min(need, target.reserveAmmo);
+  target.ammo += amount;
+  target.reserveAmmo -= amount;
+  syncActiveWeaponToSlot(target);
+}
+
+function updateReloadTimer(target, delta) {
+  if (target.reloadTimer <= 0) {
+    return;
+  }
+  target.reloadTimer -= delta;
+  if (target.reloadTimer <= 0) {
+    target.reloadTimer = 0;
+    finishReload(target);
+  }
+}
+
+function prepareUnitWeaponForShot(unit) {
+  if (unit.reloadTimer > 0) {
+    return false;
+  }
+
+  if (unit.ammo > 0) {
+    unit.ammo -= 1;
+    syncActiveWeaponToSlot(unit);
+    return true;
+  }
+
+  if (unit.reserveAmmo > 0) {
+    beginReload(unit);
+    unit.fireCooldown = Math.max(unit.fireCooldown, unit.reloadTime);
+    return false;
+  }
+
+  const nextSlot = findUsableWeaponSlot(unit);
+  if (nextSlot >= 0 && nextSlot !== (unit.activeWeaponSlot ?? 0)) {
+    switchWeaponSlot(unit, nextSlot);
+    unit.fireCooldown = Math.max(unit.fireCooldown, 0.28);
+    return false;
+  }
+
+  unit.fireCooldown = Math.max(unit.fireCooldown, 0.8);
+  return false;
 }
 
 function applyDamage(amount, source = null) {
@@ -2847,12 +2906,7 @@ function updatePlayer(delta) {
   player.muzzleFlash = Math.max(0, player.muzzleFlash - delta * 12);
   player.shotSpread = Math.max(0, player.shotSpread - delta * (player.aimProgress > 0.45 ? 1.9 : 1.15));
 
-  if (player.reloadTimer > 0) {
-    player.reloadTimer -= delta;
-    if (player.reloadTimer <= 0) {
-      finishReload();
-    }
-  }
+  updateReloadTimer(player, delta);
 
   player.aimProgress += ((keys.has("MouseRight") ? 1 : 0) - player.aimProgress) * Math.min(1, delta * 10);
   player.fov += (((Math.PI / 3) - player.aimProgress * 0.2) - player.fov) * Math.min(1, delta * 9);
@@ -3105,6 +3159,7 @@ function updateUnits(delta) {
     unit.hitFlash = Math.max(0, unit.hitFlash - delta * 3.8);
     unit.hurtTilt = Math.max(0, unit.hurtTilt - delta * 5);
     unit.muzzleFlash = Math.max(0, unit.muzzleFlash - delta * 10);
+    updateReloadTimer(unit, delta);
     unit.searchTimer -= delta;
     unit.underFireTimer = Math.max(0, (unit.underFireTimer ?? 0) - delta);
     unit.chatCooldown = Math.max(0, (unit.chatCooldown ?? 0) - delta);
@@ -3204,6 +3259,9 @@ function updateUnits(delta) {
       && lineOfSight(unit.x, unit.y, target.x, target.y)
       && !((unit.underFireTimer ?? 0) > 0.32 && isFriendlyTeam(unit.team, player.team))
     ) {
+      if (!prepareUnitWeaponForShot(unit)) {
+        continue;
+      }
       const weapon = WEAPONS[unit.weaponKey ?? "rifle"];
       const spread = (weapon.spreadHip + Math.random() * 0.04) * (unit.aimMultiplier ?? 1);
       const shotAngle = unit.aimAngle + (Math.random() - 0.5) * spread;
