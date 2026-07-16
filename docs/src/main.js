@@ -3725,13 +3725,11 @@ function renderMinimap() {
       ctx.fillRect(ox + x * cell, oy + y * cell, cell - 1, cell - 1);
     }
   }
-  ctx.fillStyle = "#8cf7ba";
-  const playerTeam = TEAMS[player.team];
-  ctx.fillStyle = playerTeam.color;
+  ctx.fillStyle = PROJECTILE_COLORS.friendly;
   ctx.beginPath();
   ctx.arc(ox + player.x * cell, oy + player.y * cell, 4, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = playerTeam.color;
+  ctx.strokeStyle = PROJECTILE_COLORS.friendly;
   ctx.beginPath();
   ctx.moveTo(ox + player.x * cell, oy + player.y * cell);
   ctx.lineTo(
@@ -3741,7 +3739,7 @@ function renderMinimap() {
   ctx.stroke();
   for (const unit of units) {
     if (!unit.alive) continue;
-    ctx.fillStyle = TEAMS[unit.team].color;
+    ctx.fillStyle = isFriendlyTeam(unit.team, player.team) ? PROJECTILE_COLORS.friendly : PROJECTILE_COLORS.enemy;
     ctx.beginPath();
     ctx.arc(ox + unit.x * cell, oy + unit.y * cell, 3, 0, Math.PI * 2);
     ctx.fill();
