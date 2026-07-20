@@ -57,6 +57,13 @@ const chatMessages = document.querySelector("#chat-messages");
 const chatInput = document.querySelector("#chat-input");
 const chatSend = document.querySelector("#chat-send");
 const chatStatus = document.querySelector("#chat-status");
+const mobileControls = document.querySelector("#mobile-controls");
+const mobileLookZone = document.querySelector("#mobile-look-zone");
+const mobileJoystick = document.querySelector("#mobile-joystick");
+const mobileJoystickStick = document.querySelector("#mobile-joystick-stick");
+const mobileFireButton = document.querySelector("#mobile-fire");
+const mobileReloadButton = document.querySelector("#mobile-reload");
+const mobileSwitchButton = document.querySelector("#mobile-switch");
 
 const MAP_W = 24;
 const MAP_H = 24;
@@ -110,6 +117,15 @@ const map = mapRows.map((row) => row.split("").map(Number));
 const keys = new Set();
 const inputState = { firing: false };
 const mouseState = { active: false };
+const touchInput = {
+  enabled: false,
+  movePointerId: null,
+  moveX: 0,
+  moveY: 0,
+  lookPointerId: null,
+  lastLookX: 0,
+  lastLookY: 0,
+};
 const wallDepthBuffer = [];
 const skinPreviewImages = {};
 const skinThumbCache = {};
@@ -1583,14 +1599,30 @@ function togglePlayerWeapon() {
   const nextSlot = player.activeWeaponSlot === 0 ? 1 : 0;
   if (switchWeaponSlot(player, nextSlot)) {
     const weapon = WEAPONS[player.weaponKey];
-    promptText.textContent = `已切换到 ${weapon.name}。按 Q 可在两把枪之间切换。`;
+    promptText.textContent = touchInput.enabled
+      ? `已切换到 ${weapon.name}。点右侧“换枪”可在两把枪之间切换。`
+      : `已切换到 ${weapon.name}。按 Q 可在两把枪之间切换。`;
     updateHud();
   }
+}
+
+function shouldUseTouchControls() {
+  return window.matchMedia("(pointer: coarse)").matches
+    || navigator.maxTouchPoints > 0
+    || window.innerWidth <= 900;
+}
+
+function applyInputMode() {
+  touchInput.enabled = shouldUseTouchControls();
+  document.body.classList.toggle("touch-device", touchInput.enabled);
+  document.body.classList.toggle("desktop-device", !touchInput.enabled);
+  mobileControls?.setAttribute("aria-hidden", touchInput.enabled ? "false" : "true");
 }
 
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  applyInputMode();
 }
 
 function isWall(x, y) {
@@ -2884,10 +2916,14 @@ function resetGame(mode = "ranked") {
   const difficultyProfile = getDifficultyProfileByWins(progression.wins);
   if (mode === "ranked") {
     objectiveText.textContent = `两队固定 7 人。你已加入 ${TEAMS[player.team].name}，歼灭敌方全队。当前段位 ${difficultyProfile.label}，段位越高敌军越强。`;
-    promptText.textContent = "排位赛已开始。你现在可携带两把枪，按 Q 切换武器。";
+    promptText.textContent = touchInput.enabled
+      ? "排位赛已开始。左摇杆移动，右侧滑动观察，用右侧按钮发射、换弹、换枪。"
+      : "排位赛已开始。你现在可携带两把枪，按 Q 切换武器。";
   } else {
     objectiveText.textContent = `练习场模式。你已加入 ${TEAMS[player.team].name}，本局不计胜场与段位，可自由热身熟悉地图。`;
-    promptText.textContent = "练习场已开始。这里不会影响段位，适合先热身和试枪。";
+    promptText.textContent = touchInput.enabled
+      ? "练习场已开始。左摇杆移动，右侧滑动观察，用右侧按钮发射、换弹、换枪。"
+      : "练习场已开始。这里不会影响段位，适合先热身和试枪。";
   }
   damageMask.style.opacity = "0";
   resultOverlay.classList.remove("overlay--active");
@@ -2922,13 +2958,21 @@ function updatePlayer(delta) {
   const moveY = Math.sin(player.angle);
   const strafeX = Math.cos(player.angle + Math.PI / 2);
   const strafeY = Math.sin(player.angle + Math.PI / 2);
+  const touchForward = touchInput.enabled ? -touchInput.moveY : 0;
+  const touchStrafe = touchInput.enabled ? touchInput.moveX : 0;
   let moving = false;
   if (keys.has("KeyW")) tryMove(moveX * move * delta, moveY * move * delta);
   if (keys.has("KeyS")) tryMove(-moveX * move * delta, -moveY * move * delta);
   if (keys.has("KeyA")) tryMove(-strafeX * move * delta, -strafeY * move * delta);
   if (keys.has("KeyD")) tryMove(strafeX * move * delta, strafeY * move * delta);
+  if (Math.abs(touchForward) > 0.08 || Math.abs(touchStrafe) > 0.08) {
+    tryMove(
+      (moveX * touchForward + strafeX * touchStrafe) * move * delta,
+      (moveY * touchForward + strafeY * touchStrafe) * move * delta,
+    );
+  }
   separatePlayerFromFriendlies();
-  moving = keys.has("KeyW") || keys.has("KeyS") || keys.has("KeyA") || keys.has("KeyD");
+  moving = keys.has("KeyW") || keys.has("KeyS") || keys.has("KeyA") || keys.has("KeyD") || Math.abs(touchForward) > 0.08 || Math.abs(touchStrafe) > 0.08;
   player.moveBlend += ((moving ? 1 : 0) - player.moveBlend) * Math.min(1, delta * 10);
   player.moveBob += delta * (move / player.moveSpeed) * (moving ? 10 : 2.5);
 
@@ -3804,6 +3848,137 @@ function tick(delta) {
   render();
 }
 
+function gameplayInputBlocked() {
+  return chatOpen
+    || loginOverlay.classList.contains("overlay--active")
+    || startOverlay.classList.contains("overlay--active")
+    || resultOverlay.classList.contains("overlay--active")
+    || summaryOverlay.classList.contains("overlay--active");
+}
+
+function resetVirtualJoystick() {
+  touchInput.movePointerId = null;
+  touchInput.moveX = 0;
+  touchInput.moveY = 0;
+  if (mobileJoystickStick) {
+    mobileJoystickStick.style.transform = "translate(-50%, -50%)";
+  }
+}
+
+function updateVirtualJoystick(event) {
+  const rect = mobileJoystick.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const maxDistance = rect.width * 0.34;
+  const dx = event.clientX - centerX;
+  const dy = event.clientY - centerY;
+  const distance = Math.hypot(dx, dy);
+  const clamped = distance > maxDistance && distance > 0 ? maxDistance / distance : 1;
+  const stickX = dx * clamped;
+  const stickY = dy * clamped;
+  touchInput.moveX = stickX / maxDistance;
+  touchInput.moveY = stickY / maxDistance;
+  mobileJoystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+}
+
+function resetTouchInputs() {
+  inputState.firing = false;
+  touchInput.lookPointerId = null;
+  mobileFireButton?.classList.remove("is-pressed");
+  resetVirtualJoystick();
+}
+
+mobileJoystick?.addEventListener("pointerdown", (event) => {
+  if (!touchInput.enabled || !game.running || gameplayInputBlocked()) {
+    return;
+  }
+  event.preventDefault();
+  touchInput.movePointerId = event.pointerId;
+  mobileJoystick.setPointerCapture(event.pointerId);
+  updateVirtualJoystick(event);
+});
+
+mobileJoystick?.addEventListener("pointermove", (event) => {
+  if (event.pointerId !== touchInput.movePointerId) {
+    return;
+  }
+  event.preventDefault();
+  updateVirtualJoystick(event);
+});
+
+for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  mobileJoystick?.addEventListener(eventName, (event) => {
+    if (event.pointerId === touchInput.movePointerId || eventName === "lostpointercapture") {
+      resetVirtualJoystick();
+    }
+  });
+}
+
+mobileLookZone?.addEventListener("pointerdown", (event) => {
+  if (!touchInput.enabled || !game.running || gameplayInputBlocked()) {
+    return;
+  }
+  event.preventDefault();
+  touchInput.lookPointerId = event.pointerId;
+  touchInput.lastLookX = event.clientX;
+  touchInput.lastLookY = event.clientY;
+  mobileLookZone.setPointerCapture(event.pointerId);
+});
+
+mobileLookZone?.addEventListener("pointermove", (event) => {
+  if (event.pointerId !== touchInput.lookPointerId || !game.running) {
+    return;
+  }
+  event.preventDefault();
+  const dx = event.clientX - touchInput.lastLookX;
+  const dy = event.clientY - touchInput.lastLookY;
+  touchInput.lastLookX = event.clientX;
+  touchInput.lastLookY = event.clientY;
+  player.angle += dx * 0.0062;
+  player.pitch = Math.max(-0.8, Math.min(0.8, player.pitch - dy * 0.0046));
+});
+
+for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  mobileLookZone?.addEventListener(eventName, (event) => {
+    if (event.pointerId === touchInput.lookPointerId || eventName === "lostpointercapture") {
+      touchInput.lookPointerId = null;
+    }
+  });
+}
+
+mobileFireButton?.addEventListener("pointerdown", (event) => {
+  if (!touchInput.enabled || !game.running || gameplayInputBlocked()) {
+    return;
+  }
+  event.preventDefault();
+  inputState.firing = true;
+  mobileFireButton.classList.add("is-pressed");
+  fireWeapon();
+});
+
+for (const eventName of ["pointerup", "pointercancel", "pointerleave"]) {
+  mobileFireButton?.addEventListener(eventName, () => {
+    inputState.firing = false;
+    mobileFireButton.classList.remove("is-pressed");
+  });
+}
+
+mobileReloadButton?.addEventListener("pointerdown", (event) => {
+  if (!touchInput.enabled || !game.running || gameplayInputBlocked()) {
+    return;
+  }
+  event.preventDefault();
+  beginReload();
+});
+
+mobileSwitchButton?.addEventListener("pointerdown", (event) => {
+  if (!touchInput.enabled || !game.running || gameplayInputBlocked()) {
+    return;
+  }
+  event.preventDefault();
+  togglePlayerWeapon();
+});
+
 window.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     if (!chatOpen && game.running && currentAccount) {
@@ -3838,7 +4013,7 @@ window.addEventListener("keyup", (event) => {
 });
 
 window.addEventListener("mousedown", (event) => {
-  if (chatOpen || loginOverlay.classList.contains("overlay--active") || startOverlay.classList.contains("overlay--active") || resultOverlay.classList.contains("overlay--active")) {
+  if (touchInput.enabled || gameplayInputBlocked()) {
     return;
   }
   mouseState.active = true;
@@ -3852,7 +4027,7 @@ window.addEventListener("mousedown", (event) => {
 });
 
 window.addEventListener("mouseup", (event) => {
-  if (chatOpen) {
+  if (touchInput.enabled || chatOpen) {
     return;
   }
   mouseState.active = false;
@@ -3861,7 +4036,7 @@ window.addEventListener("mouseup", (event) => {
 });
 
 window.addEventListener("mousemove", (event) => {
-  if (!game.running) {
+  if (touchInput.enabled || !game.running) {
     return;
   }
 
@@ -3881,14 +4056,14 @@ window.addEventListener("mousemove", (event) => {
 });
 
 canvas.addEventListener("click", () => {
-  if (game.running && canvas.requestPointerLock) {
+  if (!touchInput.enabled && game.running && canvas.requestPointerLock) {
     canvas.requestPointerLock();
   }
 });
 
 window.addEventListener("contextmenu", (event) => event.preventDefault());
 window.addEventListener("blur", () => {
-  inputState.firing = false;
+  resetTouchInputs();
   mouseState.active = false;
   keys.delete("MouseRight");
 });
