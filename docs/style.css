@@ -897,6 +897,109 @@ body {
   color: #081014;
 }
 
+.mobile-controls {
+  position: fixed;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.mobile-look-zone {
+  position: absolute;
+  top: 18%;
+  right: 0;
+  bottom: 20%;
+  left: 38%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.mobile-joystick {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(22px, env(safe-area-inset-bottom));
+  width: 132px;
+  height: 132px;
+  border: 1px solid rgba(99, 199, 255, 0.46);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 199, 255, 0.16), rgba(7, 16, 20, 0.52));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.mobile-joystick__stick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(141, 244, 187, 0.92), rgba(69, 184, 255, 0.82));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38), 0 0 20px rgba(69, 184, 255, 0.28);
+  transform: translate(-50%, -50%);
+}
+
+.mobile-actions {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 72px 72px;
+  grid-template-areas:
+    "fire fire"
+    "reload switch";
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.mobile-action {
+  min-height: 58px;
+  border: 1px solid rgba(140, 247, 186, 0.36);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(18, 38, 45, 0.86), rgba(7, 16, 20, 0.72));
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
+  touch-action: none;
+}
+
+.mobile-action--fire {
+  grid-area: fire;
+  min-height: 74px;
+  border-color: rgba(255, 95, 95, 0.58);
+  background: linear-gradient(135deg, rgba(255, 91, 78, 0.9), rgba(255, 150, 87, 0.78));
+  color: #170403;
+}
+
+.mobile-action:active,
+.mobile-action.is-pressed {
+  transform: translateY(2px) scale(0.98);
+  filter: brightness(1.12);
+}
+
+body.touch-device .mobile-controls {
+  display: block;
+}
+
+body.touch-device .crosshair {
+  width: 34px;
+  height: 34px;
+}
+
+body.touch-device .crosshair span:first-child {
+  left: 16px;
+  height: 26px;
+}
+
+body.touch-device .crosshair span:last-child {
+  top: 16px;
+  width: 26px;
+}
+
 @media (max-width: 960px) {
   .menu-screen {
     width: min(720px, calc(100vw - 30px));
@@ -917,19 +1020,79 @@ body {
     width: min(320px, calc(100vw - 24px));
   }
 
-  .hud__top,
-  .hud__bottom {
+  body:not(.touch-device) .hud__top,
+  body:not(.touch-device) .hud__bottom {
     flex-direction: column;
   }
 
-  .panel--objective,
-  .panel--prompt,
-  .panel--status,
-  .panel--ammo,
-  .panel--health {
+  body:not(.touch-device) .panel--objective,
+  body:not(.touch-device) .panel--prompt,
+  body:not(.touch-device) .panel--status,
+  body:not(.touch-device) .panel--ammo,
+  body:not(.touch-device) .panel--health {
     max-width: 100%;
     min-width: 0;
     width: 100%;
+  }
+
+  body.touch-device .hud__top,
+  body.touch-device .hud__bottom {
+    padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    gap: 10px;
+  }
+
+  body.touch-device .panel {
+    backdrop-filter: blur(8px);
+  }
+
+  body.touch-device .panel--objective {
+    max-width: min(50vw, 360px);
+    padding: 10px 12px;
+  }
+
+  body.touch-device .panel--status {
+    width: min(40vw, 250px);
+    min-width: 180px;
+    padding: 10px 12px;
+  }
+
+  body.touch-device .panel--prompt {
+    max-width: min(44vw, 360px);
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  body.touch-device .panel--ammo,
+  body.touch-device .panel--health {
+    min-width: 164px;
+    width: min(30vw, 220px);
+    padding: 10px 12px;
+  }
+
+  body.touch-device .panel__label {
+    margin-bottom: 5px;
+    font-size: 9px;
+  }
+
+  body.touch-device .status-grid {
+    gap: 4px 10px;
+  }
+
+  body.touch-device .status-grid span,
+  body.touch-device .weapon-grid span,
+  body.touch-device .status-note {
+    font-size: 10px;
+  }
+
+  body.touch-device .status-grid strong,
+  body.touch-device .weapon-grid strong,
+  body.touch-device .health-row strong {
+    font-size: 16px;
+  }
+
+  body.touch-device .health-row {
+    grid-template-columns: minmax(86px, 1fr) auto;
   }
 
   .briefing__grid {
@@ -987,13 +1150,32 @@ body {
     align-items: stretch;
   }
 
+  body.touch-device .chat-dock {
+    left: auto;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: 168px;
+    align-items: flex-end;
+  }
+
   .chat-panel {
     width: 100%;
   }
 
-  .hud__top,
-  .hud__bottom {
+  body:not(.touch-device) .hud__top,
+  body:not(.touch-device) .hud__bottom {
     padding: 12px;
+  }
+
+  body.touch-device .hud__top {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  body.touch-device .hud__bottom {
+    left: 154px;
+    right: 176px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    align-items: flex-end;
   }
 
   .briefing {
@@ -1006,5 +1188,57 @@ body {
 
   .health-row {
     grid-template-columns: 1fr auto;
+  }
+}
+
+@media (max-width: 720px) and (orientation: portrait) {
+  body.touch-device .hud__top {
+    flex-direction: column;
+  }
+
+  body.touch-device .hud__bottom {
+    left: 10px;
+    right: 10px;
+    bottom: 176px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body.touch-device .panel--objective,
+  body.touch-device .panel--status,
+  body.touch-device .panel--prompt,
+  body.touch-device .panel--ammo,
+  body.touch-device .panel--health {
+    max-width: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.touch-device .panel--prompt {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-joystick {
+    width: 118px;
+    height: 118px;
+  }
+
+  .mobile-joystick__stick {
+    width: 52px;
+    height: 52px;
+  }
+
+  .mobile-actions {
+    grid-template-columns: 64px 64px;
+  }
+
+  .mobile-action {
+    min-height: 54px;
+    border-radius: 16px;
+    font-size: 13px;
+  }
+
+  .mobile-action--fire {
+    min-height: 68px;
   }
 }
