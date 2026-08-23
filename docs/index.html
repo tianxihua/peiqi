@@ -147,6 +147,53 @@
                 <span class="menu-card__icon menu-card__icon--practice">✹</span>
                 <strong>练习场</strong>
               </button>
+              <button class="menu-card" id="friends-button" type="button">
+                <span class="menu-card__icon menu-card__icon--friends">+</span>
+                <strong>好友</strong>
+              </button>
+            </div>
+          </div>
+
+          <div class="friends-screen is-hidden" id="friends-screen">
+            <div class="skin-screen__top">
+              <button class="skin-back" id="friends-back-button" type="button">返回</button>
+              <div>
+                <span class="menu-screen__eyebrow">FRIENDS</span>
+                <h2>好友</h2>
+                <p>搜索名称发送好友邀请，处理收到的邀请，也可以向好友发起单挑切磋。</p>
+              </div>
+            </div>
+            <div class="friends-columns" id="friends-columns">
+              <section class="friends-column">
+                <h3>搜索好友</h3>
+                <div class="friend-search">
+                  <input id="friend-search-input" type="text" maxlength="20" placeholder="输入好友名称" />
+                  <button id="friend-invite-button" type="button">发送邀请</button>
+                </div>
+                <p class="friend-hint">名称要和对方账号完全一样。</p>
+              </section>
+              <section class="friends-column">
+                <h3>收到的邀请</h3>
+                <div class="friend-list" id="friend-request-list"></div>
+              </section>
+              <section class="friends-column">
+                <h3>好友切磋</h3>
+                <button class="friend-duel-open" id="duel-open-button" type="button">进入切磋</button>
+                <div class="friend-list friend-list--compact" id="duel-request-list"></div>
+              </section>
+            </div>
+            <div class="duel-screen is-hidden" id="duel-screen">
+              <div class="duel-arena">
+                <div class="duel-slot" id="duel-slot">
+                  <span id="duel-slot-plus">+</span>
+                  <strong id="duel-slot-name"></strong>
+                </div>
+                <button class="duel-start-button" id="duel-start-button" type="button" disabled>开始游戏</button>
+              </div>
+              <aside class="duel-friends">
+                <h3>你的好友</h3>
+                <div class="friend-list" id="friend-list"></div>
+              </aside>
             </div>
           </div>
 
@@ -224,6 +271,7 @@
     </div>
 
     <script src="./src/config.js"></script>
+    <script src="https://unpkg.com/photon-realtime@4.4.0/photon-realtime-module.js"></script>
     <script src="./src/main.js"></script>
   </body>
 </html>
