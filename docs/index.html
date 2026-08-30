@@ -125,8 +125,7 @@
           <p class="account-message" id="login-message">输入名称和密码后登录，或先注册一个新账号。</p>
         </div>
       </div>
-
-      <div class="overlay overlay--menu" id="start-overlay">
+            <div class="overlay overlay--menu" id="start-overlay">
         <div class="menu-screen">
           <div class="menu-home" id="menu-home">
             <div class="menu-screen__header">
@@ -151,6 +150,85 @@
                 <span class="menu-card__icon menu-card__icon--friends">+</span>
                 <strong>好友</strong>
               </button>
+              <button class="menu-card" id="shop-button" type="button">
+                <span class="menu-card__icon menu-card__icon--shop">$</span>
+                <strong>商城</strong>
+              </button>
+              <button class="menu-card" id="events-button" type="button">
+                <span class="menu-card__icon menu-card__icon--events">!</span>
+                <strong>活动</strong>
+              </button>
+            </div>
+          </div>
+
+          <div class="shop-screen is-hidden" id="shop-screen">
+            <div class="skin-screen__top">
+              <button class="skin-back" id="shop-back-button" type="button">返回</button>
+              <div>
+                <span class="menu-screen__eyebrow">SUPPLY SHOP</span>
+                <h2>商城</h2>
+                <p>商城每周自动轮换，用活动获得的金币购买补给和外观。子弹皮肤只会改变你自己的子弹。</p>
+              </div>
+            </div>
+            <div class="shop-grid">
+              <section class="shop-card">
+                <span class="shop-card__tag">推荐</span>
+                <h3>新兵补给箱</h3>
+                <p>包含随机武器皮肤和战区补给券。</p>
+                <strong>300 金币</strong>
+                <button type="button">即将开放</button>
+              </section>
+              <section class="shop-card">
+                <span class="shop-card__tag">外观</span>
+                <h3>随机子弹皮肤</h3>
+                <p>随机解锁金色五角星、烟花或金币子弹中的一种。</p>
+                <strong>600 金币</strong>
+                <button id="buy-bullet-skin-button" type="button">购买</button>
+              </section>
+              <section class="shop-card">
+                <span class="shop-card__tag">限时</span>
+                <h3>排位加成卡</h3>
+                <p>获胜时额外获得一次胜场加成。</p>
+                <strong>900 金币</strong>
+                <button type="button">即将开放</button>
+              </section>
+            </div>
+          </div>
+
+          <div class="events-screen is-hidden" id="events-screen">
+            <div class="skin-screen__top">
+              <button class="skin-back" id="events-back-button" type="button">返回</button>
+              <div>
+                <span class="menu-screen__eyebrow">LIVE OPS</span>
+                <h2>活动</h2>
+                <p>活动每周自动轮换，新一周会刷新任务和领取状态，完成后可领取金币奖励。</p>
+              </div>
+            </div>
+            <div class="events-list">
+              <section class="event-card event-card--active">
+                <div>
+                  <span>进行中</span>
+                  <h3>每日突入</h3>
+                  <p>完成 3 场练习或排位，奖励 200 金币。</p>
+                </div>
+                <button id="event-daily-button" type="button">未完成</button>
+              </section>
+              <section class="event-card">
+                <div>
+                  <span>周任务</span>
+                  <h3>精准压制</h3>
+                  <p>累计造成 3000 点伤害，奖励随机枪械皮肤。</p>
+                </div>
+                <button id="event-damage-button" type="button">未完成</button>
+              </section>
+              <section class="event-card">
+                <div>
+                  <span>好友</span>
+                  <h3>双人切磋</h3>
+                  <p>完成 1 次好友单挑，奖励活动徽章。</p>
+                </div>
+                <button id="event-duel-button" type="button">未完成</button>
+              </section>
             </div>
           </div>
 
@@ -209,6 +287,7 @@
             <div class="skin-tabs">
               <button class="skin-tab is-active" id="skin-tab-rifle" type="button">突击步枪</button>
               <button class="skin-tab" id="skin-tab-pistol" type="button">小手枪</button>
+              <button class="skin-tab" id="skin-tab-bullet" type="button">子弹皮肤</button>
             </div>
             <div class="skin-grid" id="skin-grid"></div>
           </div>
