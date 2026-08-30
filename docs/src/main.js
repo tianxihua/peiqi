@@ -7,15 +7,28 @@ const rankedButton = document.querySelector("#ranked-button");
 const practiceButton = document.querySelector("#practice-button");
 const skinButton = document.querySelector("#skin-button");
 const friendsButton = document.querySelector("#friends-button");
+const shopButton = document.querySelector("#shop-button");
+const eventsButton = document.querySelector("#events-button");
 const menuNote = document.querySelector("#menu-note");
 const menuHome = document.querySelector("#menu-home");
 const skinScreen = document.querySelector("#skin-screen");
 const friendsScreen = document.querySelector("#friends-screen");
+const shopScreen = document.querySelector("#shop-screen");
+const eventsScreen = document.querySelector("#events-screen");
 const skinBackButton = document.querySelector("#skin-back-button");
 const friendsBackButton = document.querySelector("#friends-back-button");
+const shopBackButton = document.querySelector("#shop-back-button");
+const eventsBackButton = document.querySelector("#events-back-button");
+const buyBulletSkinButton = document.querySelector("#buy-bullet-skin-button");
+const shopCards = Array.from(document.querySelectorAll(".shop-card"));
+const eventDailyButton = document.querySelector("#event-daily-button");
+const eventDamageButton = document.querySelector("#event-damage-button");
+const eventDuelButton = document.querySelector("#event-duel-button");
+const eventCards = Array.from(document.querySelectorAll(".event-card"));
 const skinGrid = document.querySelector("#skin-grid");
 const skinTabRifle = document.querySelector("#skin-tab-rifle");
 const skinTabPistol = document.querySelector("#skin-tab-pistol");
+const skinTabBullet = document.querySelector("#skin-tab-bullet");
 const friendSearchInput = document.querySelector("#friend-search-input");
 const friendInviteButton = document.querySelector("#friend-invite-button");
 const friendRequestList = document.querySelector("#friend-request-list");
@@ -107,6 +120,50 @@ const SKIN_SHEET_PATHS = {
   pistol: "./assets/skins/pistol-sheet.png",
   rifle: "./assets/skins/rifle-sheet.png",
 };
+const BULLET_SKIN_PRICE = 600;
+const BULLET_SKINS = [
+  { id: "bullet-default", name: "默认子弹", category: "bullet", kind: "default", unlockedByDefault: true },
+  { id: "bullet-star", name: "金色五角星子弹", category: "bullet", kind: "star" },
+  { id: "bullet-firework", name: "烟花子弹", category: "bullet", kind: "firework" },
+  { id: "bullet-coin", name: "金币子弹", category: "bullet", kind: "coin" },
+  { id: "bullet-lightning", name: "闪电子弹", category: "bullet", kind: "lightning" },
+  { id: "bullet-frost", name: "冰晶子弹", category: "bullet", kind: "frost" },
+  { id: "bullet-heart", name: "爱心子弹", category: "bullet", kind: "heart" },
+  { id: "bullet-target", name: "靶心子弹", category: "bullet", kind: "target" },
+  { id: "bullet-orb", name: "紫能子弹", category: "bullet", kind: "orb" },
+];
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const WEEKLY_SHOP_ROTATIONS = [
+  [
+    { tag: "本周", title: "随机子弹皮肤", description: "本周外观补给，随机解锁一个还没拥有的子弹皮肤。", price: 520, action: "bullet" },
+    { tag: "补给", title: "战区金币包", description: "活动专属补给，本周暂未开放购买。", price: 300, action: "locked" },
+    { tag: "限时", title: "冰晶补给箱", description: "主打冷色系外观，本周展示中。", price: 760, action: "locked" },
+  ],
+  [
+    { tag: "本周", title: "随机子弹皮肤", description: "轮换外观补给，优先抽取你还缺少的弹道图案。", price: 600, action: "bullet" },
+    { tag: "推荐", title: "突入作战包", description: "训练场主题补给，本周暂未开放购买。", price: 420, action: "locked" },
+    { tag: "限时", title: "闪电弹药箱", description: "本周主题为高亮电弧和快速突击。", price: 820, action: "locked" },
+  ],
+  [
+    { tag: "本周", title: "随机子弹皮肤", description: "本周折扣补给，随机获得一个未解锁的玩家子弹皮肤。", price: 480, action: "bullet" },
+    { tag: "外观", title: "靶心涂装箱", description: "精准射击主题外观，本周展示中。", price: 680, action: "locked" },
+    { tag: "活动", title: "双人切磋票", description: "好友玩法主题道具，本周暂未开放购买。", price: 360, action: "locked" },
+  ],
+  [
+    { tag: "本周", title: "随机子弹皮肤", description: "本周精选补给，可能抽到爱心、紫能、金币等子弹皮肤。", price: 650, action: "bullet" },
+    { tag: "推荐", title: "烟花弹药箱", description: "庆典主题外观，本周展示中。", price: 780, action: "locked" },
+    { tag: "限时", title: "排位荣誉包", description: "排位主题补给，本周暂未开放购买。", price: 900, action: "locked" },
+  ],
+];
+const WEEKLY_EVENT_POOL = [
+  { id: "matches-small", tag: "周任务", label: "快速突入", description: "完成 2 场练习或排位。", target: 2, reward: 180, progress: (stats) => stats.matchesPlayed },
+  { id: "matches-large", tag: "周任务", label: "连续部署", description: "完成 5 场练习或排位。", target: 5, reward: 420, progress: (stats) => stats.matchesPlayed },
+  { id: "damage-small", tag: "火力", label: "火力压制", description: "累计造成 1800 点伤害。", target: 1800, reward: 260, progress: (stats) => stats.damageDealt },
+  { id: "damage-large", tag: "火力", label: "精准清场", description: "累计造成 3600 点伤害。", target: 3600, reward: 520, progress: (stats) => stats.damageDealt },
+  { id: "duel-one", tag: "好友", label: "单挑热身", description: "完成 1 次好友单挑。", target: 1, reward: 160, progress: (stats) => stats.duelsPlayed },
+  { id: "duel-three", tag: "好友", label: "切磋周", description: "完成 3 次好友单挑。", target: 3, reward: 390, progress: (stats) => stats.duelsPlayed },
+];
+const EVENT_BUTTONS = [eventDailyButton, eventDamageButton, eventDuelButton];
 
 const mapRows = [
   "111111111111111111111111",
@@ -393,12 +450,15 @@ let skinRenderToken = 0;
 let friendSyncTimer = null;
 let friendSyncBusy = false;
 let acceptedDuelFriend = "";
+let duelLobbyRole = "";
+let duelReady = false;
 let duelRoomId = "";
 let duelPlayerKey = "";
 let duelOpponentKey = "";
 let duelSyncTimer = 0;
 let duelSyncBusy = false;
 let duelDamageSeq = 0;
+let duelStartedAt = 0;
 let photonClient = null;
 let photonJoined = false;
 let photonJoinStarted = false;
@@ -536,12 +596,26 @@ function normalizeAccountRecord(account) {
     passwordHash: typeof account.passwordHash === "string" ? account.passwordHash : "",
     password: typeof account.password === "string" ? account.password : "",
     wins: Math.max(0, Number(account.wins) || 0),
+    coins: Math.max(0, Number(account.coins) || 0),
     selectedSkins: account.selectedSkins && typeof account.selectedSkins === "object"
       ? {
         rifle: account.selectedSkins.rifle ?? "rifle-1",
         pistol: account.selectedSkins.pistol ?? "pistol-1",
+        bullet: account.selectedSkins.bullet ?? "bullet-default",
       }
-      : { rifle: "rifle-1", pistol: "pistol-1" },
+      : { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" },
+    unlockedBulletSkins: Array.isArray(account.unlockedBulletSkins)
+      ? Array.from(new Set(["bullet-default", ...account.unlockedBulletSkins]))
+      : ["bullet-default"],
+    eventStats: account.eventStats && typeof account.eventStats === "object"
+      ? {
+        matchesPlayed: Math.max(0, Number(account.eventStats.matchesPlayed) || 0),
+        damageDealt: Math.max(0, Number(account.eventStats.damageDealt) || 0),
+        duelsPlayed: Math.max(0, Number(account.eventStats.duelsPlayed) || 0),
+      }
+      : { matchesPlayed: 0, damageDealt: 0, duelsPlayed: 0 },
+    eventWeek: Number(account.eventWeek) || getWeeklyIndex(),
+    claimedEvents: account.claimedEvents && typeof account.claimedEvents === "object" ? account.claimedEvents : {},
     updatedAt: Number(account.updatedAt) || Date.now(),
   };
   return normalized;
@@ -559,7 +633,12 @@ async function saveOnlineAccount(name, account) {
   const payload = {
     passwordHash: account.passwordHash,
     wins: Math.max(0, Number(account.wins) || 0),
-    selectedSkins: account.selectedSkins ?? { rifle: "rifle-1", pistol: "pistol-1" },
+    coins: Math.max(0, Number(account.coins) || 0),
+    selectedSkins: account.selectedSkins ?? { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" },
+    unlockedBulletSkins: Array.isArray(account.unlockedBulletSkins) ? account.unlockedBulletSkins : ["bullet-default"],
+    eventStats: account.eventStats ?? { matchesPlayed: 0, damageDealt: 0, duelsPlayed: 0 },
+    eventWeek: Number(account.eventWeek) || getWeeklyIndex(),
+    claimedEvents: account.claimedEvents ?? {},
     updatedAt: Date.now(),
   };
   await requestOnline(`accounts/${toFirebaseKey(name)}`, {
@@ -620,11 +699,51 @@ function getAccountRecord(name) {
 
 function ensureAccountCosmetics(account) {
   if (!account.selectedSkins || typeof account.selectedSkins !== "object") {
-    account.selectedSkins = { rifle: "rifle-1", pistol: "pistol-1" };
+    account.selectedSkins = { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" };
   }
   account.selectedSkins.rifle ??= "rifle-1";
   account.selectedSkins.pistol ??= "pistol-1";
+  account.selectedSkins.bullet ??= "bullet-default";
+  account.coins = Math.max(0, Number(account.coins) || 0);
+  account.unlockedBulletSkins = Array.isArray(account.unlockedBulletSkins)
+    ? Array.from(new Set(["bullet-default", ...account.unlockedBulletSkins]))
+    : ["bullet-default"];
+  account.eventStats = account.eventStats && typeof account.eventStats === "object"
+    ? {
+      matchesPlayed: Math.max(0, Number(account.eventStats.matchesPlayed) || 0),
+      damageDealt: Math.max(0, Number(account.eventStats.damageDealt) || 0),
+      duelsPlayed: Math.max(0, Number(account.eventStats.duelsPlayed) || 0),
+    }
+    : { matchesPlayed: 0, damageDealt: 0, duelsPlayed: 0 };
+  const currentWeek = getWeeklyIndex();
+  if (Number(account.eventWeek) !== currentWeek) {
+    account.eventWeek = currentWeek;
+    account.eventStats = { matchesPlayed: 0, damageDealt: 0, duelsPlayed: 0 };
+  }
+  account.claimedEvents = account.claimedEvents && typeof account.claimedEvents === "object" ? account.claimedEvents : {};
   return account;
+}
+
+function unlockNextBulletSkinForWin(account) {
+  const nextSkin = BULLET_SKINS.find((skin) => !skin.unlockedByDefault && !account.unlockedBulletSkins.includes(skin.id));
+  if (!nextSkin) {
+    return null;
+  }
+  account.unlockedBulletSkins.push(nextSkin.id);
+  account.selectedSkins.bullet = nextSkin.id;
+  return nextSkin;
+}
+
+function syncBulletSkinsForWins(account, wins) {
+  const unlockCount = Math.max(0, Math.min(BULLET_SKINS.length - 1, Number(wins) || 0));
+  const earnedSkins = BULLET_SKINS
+    .filter((skin) => !skin.unlockedByDefault)
+    .slice(0, unlockCount);
+  for (const skin of earnedSkins) {
+    if (!account.unlockedBulletSkins.includes(skin.id)) {
+      account.unlockedBulletSkins.push(skin.id);
+    }
+  }
 }
 
 function loadProgressionForAccount(name) {
@@ -633,6 +752,10 @@ function loadProgressionForAccount(name) {
     ensureAccountCosmetics(account);
   }
   progression.wins = Math.max(0, Number(account?.wins) || 0);
+  if (account) {
+    syncBulletSkinsForWins(account, progression.wins);
+    saveAccounts();
+  }
 }
 
 async function saveProgression() {
@@ -1094,6 +1217,7 @@ function setupOnlineDuel(friendName) {
   duelOpponentKey = getAccountKey(friendName);
   duelRoomId = getDuelRoomId(duelPlayerKey, duelOpponentKey);
   game.duelOpponentKey = duelOpponentKey;
+  duelStartedAt = Date.now();
   duelSyncTimer = 0;
   duelDamageSeq = 0;
   photonJoined = false;
@@ -1105,6 +1229,7 @@ function setupOnlineDuel(friendName) {
 function getLocalDuelPayload() {
   return {
     name: currentAccount,
+    startedAt: duelStartedAt,
     x: player.x,
     y: player.y,
     angle: player.angle,
@@ -1120,6 +1245,10 @@ function getLocalDuelPayload() {
 function applyRemoteDuelPlayer(remote) {
   const opponent = getDuelOpponentUnit();
   if (!opponent || !remote || typeof remote !== "object") {
+    return;
+  }
+  const remoteUpdatedAt = Number(remote.updatedAt) || 0;
+  if (duelStartedAt && (!remoteUpdatedAt || remoteUpdatedAt < duelStartedAt - 2000)) {
     return;
   }
   opponent.x = Number(remote.x) || opponent.x;
@@ -1175,6 +1304,10 @@ function handlePhotonDuelEvent(eventCode, content) {
     return;
   }
   if (eventCode === PHOTON_EVENT_END && !game.ended) {
+    const eventCreatedAt = Number(content.createdAt) || 0;
+    if (duelStartedAt && (!eventCreatedAt || eventCreatedAt < duelStartedAt - 2000)) {
+      return;
+    }
     if (content.winnerKey === duelOpponentKey) {
       endGame(false, `${game.duelOpponent || "对手"} 赢下了这场单挑。`);
     } else if (content.winnerKey === duelPlayerKey) {
@@ -1244,6 +1377,7 @@ function sendPhotonDamage(targetKey, amount) {
     fromKey: duelPlayerKey,
     targetKey,
     amount,
+    startedAt: duelStartedAt,
     eventId: `${Date.now()}-${duelDamageSeq}`,
   });
   return true;
@@ -1255,6 +1389,8 @@ function sendPhotonEnd(success) {
   }
   photonClient.raiseEvent(PHOTON_EVENT_END, {
     winnerKey: success ? duelPlayerKey : duelOpponentKey,
+    startedAt: duelStartedAt,
+    createdAt: Date.now(),
   });
 }
 
@@ -1284,6 +1420,14 @@ async function processIncomingDuelDamage(roomData) {
   }
   for (const [eventId, event] of Object.entries(incoming)) {
     if (duelProcessedDamage.has(eventId) || event?.consumed) {
+      continue;
+    }
+    const eventCreatedAt = Number(event?.createdAt) || 0;
+    if (duelStartedAt && (!eventCreatedAt || eventCreatedAt < duelStartedAt - 2000)) {
+      requestOnline(`duelRooms/${duelRoomId}/damage/${duelPlayerKey}/${eventId}/consumed`, {
+        method: "PUT",
+        body: JSON.stringify(true),
+      }).catch(() => {});
       continue;
     }
     duelProcessedDamage.add(eventId);
@@ -1424,12 +1568,30 @@ function renderFriends() {
   }
 
   const acceptedSent = friendsState.sentDuelRequests.find((request) => request.status === "accepted");
-  if (!acceptedDuelFriend && acceptedSent) {
+  const acceptedIncoming = friendsState.duelRequests.find((request) => request.status === "accepted");
+  if (acceptedSent) {
     acceptedDuelFriend = acceptedSent.to;
+    duelLobbyRole = "host";
+    duelReady = Boolean(acceptedSent.ready);
+  } else if (acceptedIncoming) {
+    acceptedDuelFriend = acceptedIncoming.from;
+    duelLobbyRole = "guest";
+    duelReady = Boolean(acceptedIncoming.ready);
+  } else if (!acceptedDuelFriend) {
+    duelLobbyRole = "";
+    duelReady = false;
   }
   duelSlot.classList.toggle("has-player", Boolean(acceptedDuelFriend));
-  duelSlotName.textContent = acceptedDuelFriend;
-  duelStartButton.disabled = !acceptedDuelFriend;
+  duelSlotName.textContent = acceptedDuelFriend
+    ? duelLobbyRole === "host"
+      ? `${acceptedDuelFriend}${duelReady ? " 已准备" : " 未准备"}`
+      : `${acceptedDuelFriend} 的房间`
+    : "";
+  duelStartButton.textContent = duelLobbyRole === "guest"
+    ? duelReady ? "已准备" : "开始准备"
+    : "开始游戏";
+  duelStartButton.classList.toggle("is-ready", duelLobbyRole === "guest" && duelReady);
+  duelStartButton.disabled = duelLobbyRole === "host" ? !acceptedDuelFriend || !duelReady : !acceptedDuelFriend;
 }
 
 async function syncFriends() {
@@ -1458,18 +1620,26 @@ async function syncFriends() {
     .map(([, value]) => ({
       from: value?.from ?? "",
       status: value?.status ?? "pending",
+      ready: Boolean(value?.ready),
+      startedAt: Number(value?.startedAt) || 0,
     }))
     .filter((request) => request.from);
 
   const sentChecks = await Promise.all(friendsState.friends.map(async (friend) => {
     const request = await readOnlineOrNull(`duelRequests/${getAccountKey(friend.name)}/${accountKey}`);
     return request?.from === currentAccount
-      ? { to: friend.name, status: request.status ?? "pending" }
+      ? {
+        to: friend.name,
+        status: request.status ?? "pending",
+        ready: Boolean(request.ready),
+        startedAt: Number(request.startedAt) || 0,
+      }
       : null;
   }));
   friendsState.sentDuelRequests = sentChecks.filter(Boolean);
   friendSyncBusy = false;
   renderFriends();
+  handleStartedDuelInvite();
 }
 
 function startFriendSync() {
@@ -1582,7 +1752,7 @@ async function sendDuelInvite(friendName) {
   try {
     await requestOnline(`duelRequests/${getAccountKey(friendName)}/${getAccountKey()}`, {
       method: "PUT",
-      body: JSON.stringify({ from: currentAccount, status: "pending", createdAt: Date.now() }),
+      body: JSON.stringify({ from: currentAccount, status: "pending", ready: false, createdAt: Date.now() }),
     });
     setMenuNote(`已向 ${friendName} 发送切磋邀请。`);
     syncFriends();
@@ -1594,11 +1764,13 @@ async function sendDuelInvite(friendName) {
 async function acceptDuelInvite(fromName) {
   try {
     acceptedDuelFriend = fromName;
+    duelLobbyRole = "guest";
+    duelReady = false;
     await requestOnline(`duelRequests/${getAccountKey()}/${getAccountKey(fromName)}`, {
       method: "PUT",
-      body: JSON.stringify({ from: fromName, status: "accepted", createdAt: Date.now() }),
+      body: JSON.stringify({ from: fromName, status: "accepted", ready: false, createdAt: Date.now() }),
     });
-    setMenuNote(`你已同意 ${fromName} 的切磋邀请。`);
+    setMenuNote(`你已进入 ${fromName} 的切磋房间，准备好后点击“开始准备”。`);
     openDuelScreen();
     syncFriends();
   } catch {
@@ -1622,9 +1794,71 @@ async function declineDuelInvite(fromName) {
   }
 }
 
+async function consumeDuelInvite(friendName) {
+  const myKey = getAccountKey();
+  const friendKey = getAccountKey(friendName);
+  const createdAt = Date.now();
+  friendsState.sentDuelRequests = friendsState.sentDuelRequests.filter((request) => request.to !== friendName);
+  friendsState.duelRequests = friendsState.duelRequests.filter((request) => request.from !== friendName);
+  await Promise.allSettled([
+    requestOnline(`duelRequests/${friendKey}/${myKey}`, {
+      method: "PUT",
+      body: JSON.stringify({ from: currentAccount, status: "used", createdAt }),
+    }),
+    requestOnline(`duelRequests/${myKey}/${friendKey}`, {
+      method: "PUT",
+      body: JSON.stringify({ from: friendName, status: "used", createdAt }),
+    }),
+  ]);
+}
+
+async function toggleDuelReady() {
+  if (duelLobbyRole !== "guest" || !acceptedDuelFriend) {
+    return;
+  }
+  duelReady = !duelReady;
+  const localRequest = friendsState.duelRequests.find((request) => request.from === acceptedDuelFriend);
+  if (localRequest) {
+    localRequest.ready = duelReady;
+  }
+  renderFriends();
+  try {
+    await requestOnline(`duelRequests/${getAccountKey()}/${getAccountKey(acceptedDuelFriend)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        from: acceptedDuelFriend,
+        status: "accepted",
+        ready: duelReady,
+        createdAt: Date.now(),
+      }),
+    });
+    setMenuNote(duelReady ? "你已准备，等待房主开始游戏。" : "你已取消准备。");
+    syncFriends();
+  } catch {
+    duelReady = !duelReady;
+    renderFriends();
+    setMenuNote("准备状态同步失败，请检查 Firebase 规则。");
+  }
+}
+
+function handleStartedDuelInvite() {
+  if (game.running || game.mode === "duel" || duelLobbyRole !== "guest" || !acceptedDuelFriend) {
+    return;
+  }
+  const startedRequest = friendsState.duelRequests.find((request) => (
+    request.from === acceptedDuelFriend && request.status === "started"
+  ));
+  if (!startedRequest) {
+    return;
+  }
+  startAcceptedDuel(acceptedDuelFriend, false);
+}
+
 function openFriendsScreen() {
   menuHome.classList.add("is-hidden");
   skinScreen.classList.add("is-hidden");
+  shopScreen.classList.add("is-hidden");
+  eventsScreen.classList.add("is-hidden");
   friendsScreen.classList.remove("is-hidden");
   friendsColumns.classList.remove("is-hidden");
   duelScreen.classList.add("is-hidden");
@@ -1640,29 +1874,312 @@ function closeFriendsScreen() {
   setMenuNote("已返回主菜单。点击“排位赛”开始正式匹配。");
 }
 
+function openShopScreen() {
+  menuHome.classList.add("is-hidden");
+  skinScreen.classList.add("is-hidden");
+  friendsScreen.classList.add("is-hidden");
+  eventsScreen.classList.add("is-hidden");
+  shopScreen.classList.remove("is-hidden");
+  renderShop();
+  setMenuNote(`商城已打开。当前金币：${getCurrentCoins()}。`);
+}
+
+function closeShopScreen() {
+  shopScreen.classList.add("is-hidden");
+  menuHome.classList.remove("is-hidden");
+  setMenuNote("已返回主菜单。点击“商城”可查看补给和外观商品。");
+}
+
+function openEventsScreen() {
+  menuHome.classList.add("is-hidden");
+  skinScreen.classList.add("is-hidden");
+  friendsScreen.classList.add("is-hidden");
+  shopScreen.classList.add("is-hidden");
+  eventsScreen.classList.remove("is-hidden");
+  renderEvents();
+  setMenuNote(`活动已打开。完成目标后可领取金币，当前金币：${getCurrentCoins()}。`);
+}
+
+function closeEventsScreen() {
+  eventsScreen.classList.add("is-hidden");
+  menuHome.classList.remove("is-hidden");
+  setMenuNote("已返回主菜单。点击“活动”可查看当前任务。");
+}
+
 function openDuelScreen() {
   friendsColumns.classList.add("is-hidden");
   duelScreen.classList.remove("is-hidden");
-  setMenuNote("选择好友发送切磋邀请，对方同意后即可开始单挑。");
+  setMenuNote("发出邀请的人是房主。被邀请的人准备后，房主才能开始单挑。");
   renderFriends();
 }
 
-function startDuelGame() {
+async function startDuelGame() {
+  if (duelLobbyRole === "guest") {
+    toggleDuelReady();
+    return;
+  }
+  if (duelLobbyRole !== "host") {
+    setMenuNote("只有房主可以开始游戏。");
+    return;
+  }
   if (!acceptedDuelFriend) {
     setMenuNote("还没有好友同意切磋邀请。");
     return;
   }
-  game.duelOpponent = acceptedDuelFriend;
-  setupOnlineDuel(acceptedDuelFriend);
+  if (!duelReady) {
+    setMenuNote("对方还没有准备，不能开始游戏。");
+    return;
+  }
+  const opponentName = acceptedDuelFriend;
+  try {
+    const startedAt = Date.now();
+    await requestOnline(`duelRequests/${getAccountKey(opponentName)}/${getAccountKey()}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        from: currentAccount,
+        status: "started",
+        ready: true,
+        startedAt,
+        createdAt: startedAt,
+      }),
+    });
+    startAcceptedDuel(opponentName, true);
+  } catch {
+    setMenuNote("开始游戏失败，开始状态没有同步到 Firebase。");
+  }
+}
+
+function startAcceptedDuel(opponentName, isHost) {
+  acceptedDuelFriend = "";
+  duelLobbyRole = "";
+  duelReady = false;
+  game.duelOpponent = opponentName;
+  setupOnlineDuel(opponentName);
+  if (isHost) {
+    window.setTimeout(() => {
+      consumeDuelInvite(opponentName).catch(() => {});
+    }, FRIEND_SYNC_INTERVAL * 3);
+  }
   startOverlay.classList.remove("overlay--active");
   resetGame("duel");
+  duelStartedAt = Date.now();
   connectPhotonDuel();
+}
+
+function returnToMainMenuAfterDuel(message) {
+  game.running = false;
+  game.ended = true;
+  game.mode = "menu";
+  leavePhotonDuel();
+  duelRoomId = "";
+  duelPlayerKey = "";
+  duelOpponentKey = "";
+  duelStartedAt = 0;
+  acceptedDuelFriend = "";
+  duelLobbyRole = "";
+  duelReady = false;
+  duelProcessedDamage.clear();
+  projectiles.length = 0;
+  hitMarks.length = 0;
+  medDrops.length = 0;
+  weaponDrops.length = 0;
+  setChatOpen(false);
+  document.body.classList.remove("duel-mode");
+  summaryOverlay.classList.remove("overlay--active");
+  resultOverlay.classList.remove("overlay--active");
+  startOverlay.classList.add("overlay--active");
+  menuHome.classList.remove("is-hidden");
+  skinScreen.classList.add("is-hidden");
+  friendsScreen.classList.add("is-hidden");
+  shopScreen.classList.add("is-hidden");
+  eventsScreen.classList.add("is-hidden");
+  friendsColumns.classList.remove("is-hidden");
+  duelScreen.classList.add("is-hidden");
+  setMenuNote(message || "单挑结束，已返回主菜单。");
+  updateHud();
 }
 
 function setMenuNote(message) {
   if (menuNote) {
     menuNote.textContent = message;
   }
+}
+
+async function saveCurrentAccount() {
+  if (!currentAccount || !accounts[currentAccount]) {
+    return;
+  }
+  ensureAccountCosmetics(accounts[currentAccount]);
+  saveAccounts();
+  if (onlineEnabled) {
+    await saveOnlineAccount(currentAccount, accounts[currentAccount]);
+  }
+}
+
+function getCurrentCoins() {
+  if (!currentAccount || !accounts[currentAccount]) {
+    return 0;
+  }
+  return ensureAccountCosmetics(accounts[currentAccount]).coins;
+}
+
+function getWeeklyIndex() {
+  const monday = new Date();
+  const daysFromMonday = (monday.getDay() + 6) % 7;
+  monday.setDate(monday.getDate() - daysFromMonday);
+  monday.setHours(0, 0, 0, 0);
+  return Math.floor(monday.getTime() / WEEK_MS);
+}
+
+function pickWeeklyItems(items, count, offset = 0) {
+  const picked = [];
+  const week = getWeeklyIndex();
+  for (let i = 0; i < count; i += 1) {
+    picked.push(items[(week + offset + i * 2) % items.length]);
+  }
+  return picked;
+}
+
+function getWeeklyShopItems() {
+  return WEEKLY_SHOP_ROTATIONS[getWeeklyIndex() % WEEKLY_SHOP_ROTATIONS.length];
+}
+
+function getWeeklyEvents() {
+  return pickWeeklyItems(WEEKLY_EVENT_POOL, EVENT_BUTTONS.length, 1);
+}
+
+function getWeeklyEventClaimKey(eventId) {
+  return `${getWeeklyIndex()}-${eventId}`;
+}
+
+function renderShop() {
+  if (shopCards.length === 0) {
+    return;
+  }
+  const account = currentAccount && accounts[currentAccount] ? ensureAccountCosmetics(accounts[currentAccount]) : null;
+  const remaining = account
+    ? BULLET_SKINS.filter((skin) => !skin.unlockedByDefault && !account.unlockedBulletSkins.includes(skin.id))
+    : [];
+  const weeklyItems = getWeeklyShopItems();
+  for (const [index, card] of shopCards.entries()) {
+    const item = weeklyItems[index];
+    if (!item) {
+      continue;
+    }
+    card.querySelector(".shop-card__tag").textContent = item.tag;
+    card.querySelector("h3").textContent = item.title;
+    card.querySelector("p").textContent = item.description;
+    card.querySelector("strong").textContent = `${item.price} 金币`;
+    const button = card.querySelector("button");
+    button.dataset.shopAction = item.action;
+    button.disabled = item.action !== "bullet"
+      || !account
+      || remaining.length === 0
+      || account.coins < item.price;
+    button.textContent = item.action !== "bullet"
+      ? "即将开放"
+      : !account
+        ? "请先登录"
+        : remaining.length === 0
+          ? "已拥有全部"
+          : account.coins < item.price
+            ? `金币不足（${account.coins}/${item.price}）`
+            : "购买";
+  }
+}
+
+function renderEvents() {
+  if (!currentAccount || !accounts[currentAccount]) {
+    return;
+  }
+  const account = ensureAccountCosmetics(accounts[currentAccount]);
+  const weeklyEvents = getWeeklyEvents();
+  for (const [index, eventDef] of weeklyEvents.entries()) {
+    const card = eventCards[index];
+    const button = EVENT_BUTTONS[index];
+    if (!card || !button) {
+      continue;
+    }
+    card.querySelector("span").textContent = eventDef.tag;
+    card.querySelector("h3").textContent = eventDef.label;
+    card.querySelector("p").textContent = `${eventDef.description} 奖励 ${eventDef.reward} 金币。`;
+    const current = Math.min(eventDef.target, eventDef.progress(account.eventStats));
+    const completed = current >= eventDef.target;
+    const claimed = Boolean(account.claimedEvents[getWeeklyEventClaimKey(eventDef.id)]);
+    button.disabled = !completed || claimed;
+    button.textContent = claimed
+      ? "已领取"
+      : completed
+        ? `领取 ${eventDef.reward} 金币`
+        : `${current}/${eventDef.target}`;
+  }
+}
+
+async function buyRandomBulletSkin() {
+  if (!currentAccount || !accounts[currentAccount]) {
+    setMenuNote("请先登录账号。");
+    return;
+  }
+  const account = ensureAccountCosmetics(accounts[currentAccount]);
+  const weeklyBulletItem = getWeeklyShopItems().find((item) => item.action === "bullet");
+  const price = weeklyBulletItem?.price ?? BULLET_SKIN_PRICE;
+  const remaining = BULLET_SKINS.filter((skin) => !skin.unlockedByDefault && !account.unlockedBulletSkins.includes(skin.id));
+  if (remaining.length === 0) {
+    setMenuNote("你已经拥有全部子弹皮肤。");
+    renderShop();
+    return;
+  }
+  if (account.coins < price) {
+    setMenuNote(`金币不足。当前 ${account.coins} 金币，需要 ${price} 金币。`);
+    renderShop();
+    return;
+  }
+  const skin = remaining[Math.floor(Math.random() * remaining.length)];
+  account.coins -= price;
+  account.unlockedBulletSkins.push(skin.id);
+  account.selectedSkins.bullet = skin.id;
+  try {
+    await saveCurrentAccount();
+    setMenuNote(`购买成功，获得 ${skin.name}。当前剩余 ${account.coins} 金币。`);
+  } catch {
+    setMenuNote(`已在本机获得 ${skin.name}，但联网同步失败。`);
+  }
+  renderShop();
+  renderEvents();
+}
+
+async function claimEventReward(eventId) {
+  if (!currentAccount || !accounts[currentAccount]) {
+    setMenuNote("请先登录账号。");
+    return;
+  }
+  const eventDef = getWeeklyEvents()[Number(eventId)];
+  if (!eventDef) {
+    return;
+  }
+  const account = ensureAccountCosmetics(accounts[currentAccount]);
+  const claimKey = getWeeklyEventClaimKey(eventDef.id);
+  if (account.claimedEvents[claimKey]) {
+    setMenuNote(`${eventDef.label} 奖励已经领取过。`);
+    renderEvents();
+    return;
+  }
+  const progress = eventDef.progress(account.eventStats);
+  if (progress < eventDef.target) {
+    setMenuNote(`${eventDef.label} 还没完成，当前进度 ${Math.min(progress, eventDef.target)}/${eventDef.target}。`);
+    renderEvents();
+    return;
+  }
+  account.coins += eventDef.reward;
+  account.claimedEvents[claimKey] = true;
+  try {
+    await saveCurrentAccount();
+    setMenuNote(`已领取 ${eventDef.label} 奖励，获得 ${eventDef.reward} 金币。当前 ${account.coins} 金币。`);
+  } catch {
+    setMenuNote(`奖励已保存在本机，但联网同步失败。当前 ${account.coins} 金币。`);
+  }
+  renderEvents();
+  renderShop();
 }
 
 function completeLogin(name) {
@@ -1740,7 +2257,12 @@ async function handleRegister() {
     const account = {
       passwordHash: await hashPassword(name, password),
       wins: 0,
-      selectedSkins: { rifle: "rifle-1", pistol: "pistol-1" },
+      coins: 0,
+      selectedSkins: { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" },
+      unlockedBulletSkins: ["bullet-default"],
+      eventStats: { matchesPlayed: 0, damageDealt: 0, duelsPlayed: 0 },
+      eventWeek: getWeeklyIndex(),
+      claimedEvents: {},
       updatedAt: Date.now(),
     };
     accounts[name] = account;
@@ -1762,14 +2284,35 @@ async function handleRegister() {
 }
 
 function getUnlockedSkinCount(category) {
+  if (category === "bullet") {
+    if (!currentAccount || !accounts[currentAccount]) {
+      return 1;
+    }
+    const account = ensureAccountCosmetics(accounts[currentAccount]);
+    return BULLET_SKINS.filter((skin) => account.unlockedBulletSkins.includes(skin.id)).length;
+  }
   return Math.max(1, Math.min(WEAPON_SKINS[category].length, progression.wins + 1));
 }
 
 function getUnlockedSkins(category) {
+  if (category === "bullet") {
+    if (!currentAccount || !accounts[currentAccount]) {
+      return [BULLET_SKINS[0]];
+    }
+    const account = ensureAccountCosmetics(accounts[currentAccount]);
+    return BULLET_SKINS.filter((skin) => account.unlockedBulletSkins.includes(skin.id));
+  }
   return WEAPON_SKINS[category].slice(0, getUnlockedSkinCount(category));
 }
 
 function getSelectedSkinId(category) {
+  if (category === "bullet") {
+    if (!currentAccount || !accounts[currentAccount]) {
+      return "bullet-default";
+    }
+    ensureAccountCosmetics(accounts[currentAccount]);
+    return accounts[currentAccount].selectedSkins.bullet ?? "bullet-default";
+  }
   if (!currentAccount || !accounts[currentAccount]) {
     return WEAPON_SKINS[category][0]?.id ?? null;
   }
@@ -1779,6 +2322,9 @@ function getSelectedSkinId(category) {
 
 function getSelectedSkin(category) {
   const selectedId = getSelectedSkinId(category);
+  if (category === "bullet") {
+    return BULLET_SKINS.find((skin) => skin.id === selectedId) ?? BULLET_SKINS[0];
+  }
   return WEAPON_SKINS[category].find((skin) => skin.id === selectedId) ?? WEAPON_SKINS[category][0] ?? null;
 }
 
@@ -1822,6 +2368,12 @@ function loadSkinSheet(sheetKey) {
 async function getSkinThumbDataUrl(skin) {
   if (skinThumbCache[skin.id]) {
     return skinThumbCache[skin.id];
+  }
+
+  if (skin.category === "bullet") {
+    const url = getBulletSkinThumbDataUrl(skin);
+    skinThumbCache[skin.id] = url;
+    return url;
   }
 
   const thumbRect = skin.thumbRect ?? skin.crop;
@@ -1888,6 +2440,216 @@ async function getSkinThumbDataUrl(skin) {
   return url;
 }
 
+function drawBulletSkinShape(drawCtx, skin, x, y, size) {
+  if (skin.kind === "star") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    drawCtx.beginPath();
+    for (let i = 0; i < 10; i += 1) {
+      const radius = i % 2 === 0 ? size : size * 0.42;
+      const angle = -Math.PI / 2 + i * Math.PI / 5;
+      const px = Math.cos(angle) * radius;
+      const py = Math.sin(angle) * radius;
+      if (i === 0) {
+        drawCtx.moveTo(px, py);
+      } else {
+        drawCtx.lineTo(px, py);
+      }
+    }
+    drawCtx.closePath();
+    drawCtx.fillStyle = "#ffd84f";
+    drawCtx.shadowColor = "#ffe88a";
+    drawCtx.shadowBlur = size * 0.45;
+    drawCtx.fill();
+    drawCtx.strokeStyle = "#fff2a8";
+    drawCtx.lineWidth = Math.max(1, size * 0.08);
+    drawCtx.stroke();
+    drawCtx.restore();
+    return;
+  }
+
+  if (skin.kind === "firework") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    const colors = ["#ff5d7d", "#78e7ff", "#ffe66b", "#a78bfa"];
+    for (let i = 0; i < 12; i += 1) {
+      const angle = i * Math.PI / 6;
+      drawCtx.strokeStyle = colors[i % colors.length];
+      drawCtx.lineWidth = Math.max(2, size * 0.12);
+      drawCtx.beginPath();
+      drawCtx.moveTo(Math.cos(angle) * size * 0.2, Math.sin(angle) * size * 0.2);
+      drawCtx.lineTo(Math.cos(angle) * size * 0.95, Math.sin(angle) * size * 0.95);
+      drawCtx.stroke();
+    }
+    drawCtx.fillStyle = "#ffffff";
+    drawCtx.shadowColor = "#7df0ff";
+    drawCtx.shadowBlur = size * 0.55;
+    drawCtx.beginPath();
+    drawCtx.arc(0, 0, size * 0.28, 0, Math.PI * 2);
+    drawCtx.fill();
+    drawCtx.restore();
+    return;
+  }
+
+  if (skin.kind === "coin") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    drawCtx.fillStyle = "#f7c948";
+    drawCtx.shadowColor = "#ffd86b";
+    drawCtx.shadowBlur = size * 0.4;
+    drawCtx.beginPath();
+    drawCtx.arc(0, 0, size * 0.86, 0, Math.PI * 2);
+    drawCtx.fill();
+    drawCtx.strokeStyle = "#fff0a8";
+    drawCtx.lineWidth = Math.max(1, size * 0.12);
+    drawCtx.stroke();
+    drawCtx.fillStyle = "#9a6415";
+    drawCtx.font = `${size}px sans-serif`;
+    drawCtx.textAlign = "center";
+    drawCtx.textBaseline = "middle";
+    drawCtx.fillText("$", 0, size * 0.04);
+    drawCtx.restore();
+    return;
+  }
+
+  if (skin.kind === "lightning") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    drawCtx.beginPath();
+    drawCtx.moveTo(size * 0.1, -size);
+    drawCtx.lineTo(-size * 0.55, size * 0.12);
+    drawCtx.lineTo(-size * 0.08, size * 0.12);
+    drawCtx.lineTo(-size * 0.28, size);
+    drawCtx.lineTo(size * 0.6, -size * 0.25);
+    drawCtx.lineTo(size * 0.12, -size * 0.25);
+    drawCtx.closePath();
+    drawCtx.fillStyle = "#8cf7ff";
+    drawCtx.shadowColor = "#4ee7ff";
+    drawCtx.shadowBlur = size * 0.65;
+    drawCtx.fill();
+    drawCtx.strokeStyle = "#ffffff";
+    drawCtx.lineWidth = Math.max(1, size * 0.08);
+    drawCtx.stroke();
+    drawCtx.restore();
+    return;
+  }
+
+  if (skin.kind === "frost") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    drawCtx.strokeStyle = "#bff4ff";
+    drawCtx.lineWidth = Math.max(2, size * 0.1);
+    drawCtx.shadowColor = "#78e7ff";
+    drawCtx.shadowBlur = size * 0.45;
+    for (let i = 0; i < 6; i += 1) {
+      const angle = i * Math.PI / 3;
+      drawCtx.beginPath();
+      drawCtx.moveTo(0, 0);
+      drawCtx.lineTo(Math.cos(angle) * size, Math.sin(angle) * size);
+      drawCtx.stroke();
+      drawCtx.beginPath();
+      drawCtx.moveTo(Math.cos(angle) * size * 0.55, Math.sin(angle) * size * 0.55);
+      drawCtx.lineTo(Math.cos(angle + 0.45) * size * 0.75, Math.sin(angle + 0.45) * size * 0.75);
+      drawCtx.moveTo(Math.cos(angle) * size * 0.55, Math.sin(angle) * size * 0.55);
+      drawCtx.lineTo(Math.cos(angle - 0.45) * size * 0.75, Math.sin(angle - 0.45) * size * 0.75);
+      drawCtx.stroke();
+    }
+    drawCtx.fillStyle = "#ffffff";
+    drawCtx.beginPath();
+    drawCtx.arc(0, 0, size * 0.24, 0, Math.PI * 2);
+    drawCtx.fill();
+    drawCtx.restore();
+    return;
+  }
+
+  if (skin.kind === "heart") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    drawCtx.scale(size / 28, size / 28);
+    drawCtx.beginPath();
+    drawCtx.moveTo(0, 18);
+    drawCtx.bezierCurveTo(-24, 2, -18, -18, -5, -10);
+    drawCtx.bezierCurveTo(0, -7, 0, -7, 5, -10);
+    drawCtx.bezierCurveTo(18, -18, 24, 2, 0, 18);
+    drawCtx.closePath();
+    drawCtx.fillStyle = "#ff6aa2";
+    drawCtx.shadowColor = "#ff9bc2";
+    drawCtx.shadowBlur = 12;
+    drawCtx.fill();
+    drawCtx.strokeStyle = "#ffd2e4";
+    drawCtx.lineWidth = 2.4;
+    drawCtx.stroke();
+    drawCtx.restore();
+    return;
+  }
+
+  if (skin.kind === "target") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    drawCtx.shadowColor = "#ff7a72";
+    drawCtx.shadowBlur = size * 0.35;
+    for (let i = 0; i < 3; i += 1) {
+      drawCtx.beginPath();
+      drawCtx.arc(0, 0, size * (0.88 - i * 0.28), 0, Math.PI * 2);
+      drawCtx.fillStyle = i % 2 === 0 ? "#fff7e8" : "#f2554b";
+      drawCtx.fill();
+    }
+    drawCtx.strokeStyle = "#251313";
+    drawCtx.lineWidth = Math.max(1, size * 0.07);
+    drawCtx.beginPath();
+    drawCtx.moveTo(-size, 0);
+    drawCtx.lineTo(size, 0);
+    drawCtx.moveTo(0, -size);
+    drawCtx.lineTo(0, size);
+    drawCtx.stroke();
+    drawCtx.restore();
+    return;
+  }
+
+  if (skin.kind === "orb") {
+    drawCtx.save();
+    drawCtx.translate(x, y);
+    const gradient = drawCtx.createRadialGradient(-size * 0.22, -size * 0.28, size * 0.08, 0, 0, size);
+    gradient.addColorStop(0, "#ffffff");
+    gradient.addColorStop(0.32, "#d8b4fe");
+    gradient.addColorStop(0.7, "#8b5cf6");
+    gradient.addColorStop(1, "#3b0764");
+    drawCtx.fillStyle = gradient;
+    drawCtx.shadowColor = "#a855f7";
+    drawCtx.shadowBlur = size * 0.75;
+    drawCtx.beginPath();
+    drawCtx.arc(0, 0, size * 0.82, 0, Math.PI * 2);
+    drawCtx.fill();
+    drawCtx.strokeStyle = "#f5d0fe";
+    drawCtx.lineWidth = Math.max(1, size * 0.08);
+    drawCtx.stroke();
+    drawCtx.restore();
+    return;
+  }
+
+  drawCtx.save();
+  drawCtx.fillStyle = "#72a7ff";
+  drawCtx.shadowColor = "#88c4ff";
+  drawCtx.shadowBlur = size * 0.35;
+  drawCtx.beginPath();
+  drawCtx.arc(x, y, size * 0.62, 0, Math.PI * 2);
+  drawCtx.fill();
+  drawCtx.restore();
+}
+
+function getBulletSkinThumbDataUrl(skin) {
+  const targetWidth = 360;
+  const targetHeight = 232;
+  const outCanvas = document.createElement("canvas");
+  outCanvas.width = targetWidth;
+  outCanvas.height = targetHeight;
+  const outCtx = outCanvas.getContext("2d");
+  outCtx.fillStyle = "rgba(255, 255, 255, 0.035)";
+  outCtx.fillRect(0, 0, targetWidth, targetHeight);
+  drawBulletSkinShape(outCtx, skin, targetWidth / 2, targetHeight / 2, 42);
+  return outCanvas.toDataURL("image/png");
+}
+
 function ensureSkinRuntimeImage(skin) {
   if (!skin) {
     return null;
@@ -1937,6 +2699,7 @@ async function renderSkinSelection() {
   const renderToken = ++skinRenderToken;
   skinTabRifle.classList.toggle("is-active", category === "rifle");
   skinTabPistol.classList.toggle("is-active", category === "pistol");
+  skinTabBullet.classList.toggle("is-active", category === "bullet");
   skinGrid.innerHTML = "";
 
   const unlockedSkins = getUnlockedSkins(category);
@@ -1987,7 +2750,8 @@ async function renderSkinSelection() {
         });
       }
       renderSkinSelection();
-      setMenuNote(`已选择${category === "rifle" ? "突击步枪" : "小手枪"}皮肤：${skin.name}。`);
+      const categoryName = category === "rifle" ? "突击步枪" : category === "pistol" ? "小手枪" : "子弹";
+      setMenuNote(`已选择${categoryName}皮肤：${skin.name}。`);
     });
     skinGrid.appendChild(card);
   }
@@ -1997,14 +2761,20 @@ function openSkinSelection(category = "rifle") {
   activeSkinCategory = category;
   menuHome.classList.add("is-hidden");
   friendsScreen.classList.add("is-hidden");
+  shopScreen.classList.add("is-hidden");
+  eventsScreen.classList.add("is-hidden");
   skinScreen.classList.remove("is-hidden");
   renderSkinSelection();
-  setMenuNote(`当前已解锁 ${getUnlockedSkinCount(category)} 把${category === "rifle" ? "突击步枪" : "小手枪"}皮肤。每赢一局会再解锁一把。`);
+  const categoryName = category === "rifle" ? "突击步枪" : category === "pistol" ? "小手枪" : "子弹";
+  const suffix = category === "bullet" ? "。子弹皮肤可在商城用金币购买。" : "。每赢一局会再解锁一把。";
+  setMenuNote(`当前已解锁 ${getUnlockedSkinCount(category)} 个${categoryName}皮肤${suffix}`);
 }
 
 function closeSkinSelection() {
   skinScreen.classList.add("is-hidden");
   friendsScreen.classList.add("is-hidden");
+  shopScreen.classList.add("is-hidden");
+  eventsScreen.classList.add("is-hidden");
   menuHome.classList.remove("is-hidden");
   setMenuNote("已返回主菜单。点击“排位赛”开始正式匹配。");
 }
@@ -3450,6 +4220,7 @@ function fireWeapon() {
         explosive: true,
         explosionRadius: weapon.explosionRadius ?? 1,
         speed: weapon.projectileSpeed,
+        skinId: getSelectedBulletSkin().id,
       });
       anyHit = true;
       continue;
@@ -3490,13 +4261,26 @@ function fireWeapon() {
       }
       bestEnemy.hitFlash = 1;
       bestEnemy.hurtTilt = 1;
+      hitMarks.push({
+        x: bestEnemy.x,
+        y: bestEnemy.y,
+        life: 0.28,
+        maxLife: 0.28,
+        skinId: getSelectedBulletSkin().id,
+      });
       anyHit = true;
       if (bestEnemy.health <= 0) {
         defeatUnit(bestEnemy, player);
       }
     } else {
       const hit = raycast(shotAngle, 20);
-      hitMarks.push({ x: hit.x, y: hit.y, life: 0.3 });
+      hitMarks.push({
+        x: hit.x,
+        y: hit.y,
+        life: 0.3,
+        maxLife: 0.3,
+        skinId: getSelectedBulletSkin().id,
+      });
     }
   }
 
@@ -3511,25 +4295,47 @@ function fireWeapon() {
 }
 
 function endGame(success, text) {
+  const wasDuel = game.mode === "duel";
   game.running = false;
   game.ended = true;
-  if (game.mode === "duel" && duelRoomId) {
+  if (wasDuel && duelRoomId) {
     sendPhotonEnd(success);
   }
-  if (game.mode === "duel" && duelRoomId && onlineEnabled) {
+  if (wasDuel && duelRoomId && onlineEnabled) {
     requestOnline(`duelRooms/${duelRoomId}/players/${duelPlayerKey}`, {
       method: "PUT",
       body: JSON.stringify(getLocalDuelPayload()),
     }).catch(() => {});
   }
   setChatOpen(false);
+  if (currentAccount && accounts[currentAccount]) {
+    const account = ensureAccountCosmetics(accounts[currentAccount]);
+    const playerDamage = Math.round(player.stats?.damageDealt ?? 0);
+    if (game.mode === "ranked" || game.mode === "practice") {
+      account.eventStats.matchesPlayed += 1;
+      account.eventStats.damageDealt += playerDamage;
+    }
+    if (wasDuel) {
+      account.eventStats.duelsPlayed += 1;
+      account.eventStats.damageDealt += playerDamage;
+    }
+    saveCurrentAccount().catch(() => {});
+  }
+  if (wasDuel) {
+    returnToMainMenuAfterDuel(text || "单挑结束，已返回主菜单。");
+    return;
+  }
   const previousWins = progression.wins;
   const summary = buildMatchSummary();
   const playerWasBest = summary.best?.isPlayer ?? false;
   let bonusWins = 0;
+  let unlockedBulletSkin = null;
   if (game.mode === "ranked") {
     if (success) {
       progression.wins += 1;
+      if (currentAccount && accounts[currentAccount]) {
+        unlockedBulletSkin = unlockNextBulletSkinForWin(ensureAccountCosmetics(accounts[currentAccount]));
+      }
     } else {
       progression.wins = Math.max(0, progression.wins - 1);
     }
@@ -3551,20 +4357,16 @@ function endGame(success, text) {
   }
   const summaryNote = game.mode === "ranked"
     ? playerWasBest
-      ? `你是本局综合最佳，额外奖励 ${bonusWins} 胜场。当前累计胜场 ${progression.wins}。`
-      : `本局综合最佳：${summary.best?.name ?? "无"}。当前累计胜场 ${progression.wins}。`
-    : game.mode === "duel"
-      ? `好友单挑仅展示本局统计，不计入段位与胜场。`
-      : `练习场仅展示本局统计，不计入段位与胜场。本局综合最佳：${summary.best?.name ?? "无"}。`;
+      ? `你是本局综合最佳，额外奖励 ${bonusWins} 胜场。当前累计胜场 ${progression.wins}。${unlockedBulletSkin ? ` 新解锁：${unlockedBulletSkin.name}。` : ""}`
+      : `本局综合最佳：${summary.best?.name ?? "无"}。当前累计胜场 ${progression.wins}。${unlockedBulletSkin ? ` 新解锁：${unlockedBulletSkin.name}。` : ""}`
+    : `练习场仅展示本局统计，不计入段位与胜场。本局综合最佳：${summary.best?.name ?? "无"}。`;
   renderMatchSummary(summary, summaryNote);
   resultTitle.textContent = success
-    ? game.mode === "ranked" ? "排位获胜" : game.mode === "duel" ? "单挑获胜" : "训练结束"
-    : game.mode === "ranked" ? "行动失败" : game.mode === "duel" ? "单挑失败" : "练习结束";
+    ? game.mode === "ranked" ? "排位获胜" : "训练结束"
+    : game.mode === "ranked" ? "行动失败" : "练习结束";
   resultText.textContent = game.mode === "ranked"
-    ? `${text} 当前累计胜场 ${progression.wins}，当前段位 ${currentRank.name}。`
-    : game.mode === "duel"
-      ? `${text} 本局不计入段位与胜场。`
-      : `${text} 当前为练习场模式，本局不计入段位与胜场。`;
+    ? `${text} 当前累计胜场 ${progression.wins}，当前段位 ${currentRank.name}。${unlockedBulletSkin ? ` 已解锁 ${unlockedBulletSkin.name}。` : ""}`
+    : `${text} 当前为练习场模式，本局不计入段位与胜场。`;
   summaryOverlay.classList.add("overlay--active");
   resultOverlay.classList.remove("overlay--active");
   updateHud();
@@ -3830,6 +4632,11 @@ function updateRespawn(delta) {
 }
 
 function updateDrops(delta) {
+  if (game.mode === "duel") {
+    medDrops.length = 0;
+    game.medDropTimer = 40;
+  }
+
   game.medDropTimer -= delta;
   game.weaponDropTimer -= delta;
 
@@ -4085,7 +4892,13 @@ function updateProjectiles(delta) {
 
     if ((p.explosive && (p.life <= 0 || isWall(p.x, p.y)))) {
       applyExplosionDamage(p);
-      hitMarks.push({ x: p.x, y: p.y, life: 0.45 });
+      hitMarks.push({
+        x: p.x,
+        y: p.y,
+        life: 0.45,
+        maxLife: 0.45,
+        skinId: p.ownerId === player.id ? p.skinId : null,
+      });
       projectiles.splice(i, 1);
       continue;
     }
@@ -4103,6 +4916,10 @@ function updateHitMarks(delta) {
       hitMarks.splice(i, 1);
     }
   }
+}
+
+function getBulletSkinById(skinId) {
+  return BULLET_SKINS.find((skin) => skin.id === skinId) ?? BULLET_SKINS[0];
 }
 
 function renderBackground() {
@@ -4139,6 +4956,40 @@ function renderWalls() {
   }
 }
 
+function renderHitMarks() {
+  const fov = player.fov;
+  const verticalOffset = player.pitch * canvas.height * 0.32 + player.recoil * 8;
+  for (const mark of hitMarks) {
+    if (!lineOfSight(player.x, player.y, mark.x, mark.y)) continue;
+    const dx = mark.x - player.x;
+    const dy = mark.y - player.y;
+    const dist = Math.hypot(dx, dy);
+    const rel = normalizeAngle(Math.atan2(dy, dx) - player.angle);
+    if (Math.abs(rel) > fov) continue;
+    const screenX = (0.5 + rel / fov) * canvas.width;
+    const wallDepth = wallDepthBuffer[Math.max(0, Math.min(canvas.width - 1, Math.round(screenX)))] ?? Infinity;
+    if (dist > wallDepth + 0.28) continue;
+    const progress = Math.max(0, mark.life / (mark.maxLife || 0.3));
+    const y = canvas.height * 0.5 + verticalOffset;
+    const size = Math.max(8, canvas.height / (dist * 8)) * (0.65 + progress * 0.55);
+    const skin = getBulletSkinById(mark.skinId);
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, progress * 1.4);
+    if (skin.kind !== "default") {
+      drawBulletSkinShape(ctx, skin, screenX, y, size);
+    } else {
+      ctx.fillStyle = "#82b7ff";
+      ctx.shadowColor = "#8bc5ff";
+      ctx.shadowBlur = size * 0.4;
+      ctx.beginPath();
+      ctx.arc(screenX, y, size * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 function getUnitHealthColor(sprite) {
   if (sprite.isPlayer) return HEALTH_COLORS.player;
   return sprite.friendly ? HEALTH_COLORS.friendly : HEALTH_COLORS.enemy;
@@ -4146,6 +4997,14 @@ function getUnitHealthColor(sprite) {
 
 function getProjectileColor(team) {
   return isFriendlyTeam(team, player.team) ? PROJECTILE_COLORS.friendly : PROJECTILE_COLORS.enemy;
+}
+
+function getSelectedBulletSkin() {
+  return getSelectedSkin("bullet") ?? BULLET_SKINS[0];
+}
+
+function getProjectileSkin(projectile) {
+  return projectile.ownerId === player.id ? getSelectedBulletSkin() : null;
 }
 
 function drawPixelSoldierSprite(sprite, screenX, y, size) {
@@ -4315,7 +5174,15 @@ function renderSprites() {
     const dist = Math.hypot(dx, dy);
     const rel = normalizeAngle(Math.atan2(dy, dx) - player.angle);
     if (Math.abs(rel) > fov) continue;
-    sprites.push({ type: "projectile", x: p.x, y: p.y, dist, rel, color: getProjectileColor(p.team) });
+    sprites.push({
+      type: "projectile",
+      x: p.x,
+      y: p.y,
+      dist,
+      rel,
+      color: getProjectileColor(p.team),
+      skin: getProjectileSkin(p),
+    });
   }
 
   sprites.sort((a, b) => b.dist - a.dist);
@@ -4359,9 +5226,14 @@ function renderSprites() {
         ctx.fillRect(barX, barY + barHeight + 6, barWidth * Math.min(1, sprite.reviveProgress / 1.6), 6);
       }
     } else {
-      ctx.beginPath();
-      ctx.arc(screenX, canvas.height * 0.5 + verticalOffset, size * 0.5, 0, Math.PI * 2);
-      ctx.fill();
+      const projectileY = canvas.height * 0.5 + verticalOffset;
+      if (sprite.skin && sprite.skin.kind !== "default") {
+        drawBulletSkinShape(ctx, sprite.skin, screenX, projectileY, Math.max(6, size * 0.56));
+      } else {
+        ctx.beginPath();
+        ctx.arc(screenX, projectileY, size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 }
@@ -4558,6 +5430,7 @@ function renderMinimap() {
 function render() {
   renderBackground();
   renderWalls();
+  renderHitMarks();
   renderSprites();
   renderDrops();
   renderWeapon();
@@ -4565,6 +5438,10 @@ function render() {
 }
 
 function tick(delta) {
+  if (game.mode === "menu") {
+    summaryOverlay.classList.remove("overlay--active");
+    resultOverlay.classList.remove("overlay--active");
+  }
   if (game.running) {
     game.elapsed += delta;
     game.timer -= delta;
@@ -4827,12 +5704,28 @@ friendsButton.addEventListener("click", () => {
   openFriendsScreen();
 });
 
+shopButton.addEventListener("click", () => {
+  openShopScreen();
+});
+
+eventsButton.addEventListener("click", () => {
+  openEventsScreen();
+});
+
 skinBackButton.addEventListener("click", () => {
   closeSkinSelection();
 });
 
 friendsBackButton.addEventListener("click", () => {
   closeFriendsScreen();
+});
+
+shopBackButton.addEventListener("click", () => {
+  closeShopScreen();
+});
+
+eventsBackButton.addEventListener("click", () => {
+  closeEventsScreen();
 });
 
 friendInviteButton.addEventListener("click", sendFriendInvite);
@@ -4856,19 +5749,49 @@ skinTabPistol.addEventListener("click", () => {
   setMenuNote(`当前已解锁 ${getUnlockedSkinCount("pistol")} 把小手枪皮肤。`);
 });
 
+skinTabBullet.addEventListener("click", () => {
+  activeSkinCategory = "bullet";
+  renderSkinSelection();
+  setMenuNote(`当前已解锁 ${getUnlockedSkinCount("bullet")} 个子弹皮肤。子弹皮肤只影响你自己的子弹。`);
+});
+
+for (const card of shopCards) {
+  const button = card.querySelector("button");
+  if (button) {
+    button.addEventListener("click", () => {
+      if (button.dataset.shopAction === "bullet") {
+        buyRandomBulletSkin();
+      }
+    });
+  }
+}
+eventDailyButton.addEventListener("click", () => claimEventReward(0));
+eventDamageButton.addEventListener("click", () => claimEventReward(1));
+eventDuelButton.addEventListener("click", () => claimEventReward(2));
+
 restartButton.addEventListener("click", () => {
+  if (game.mode === "duel") {
+    returnToMainMenuAfterDuel("单挑结束，已返回主菜单。");
+    return;
+  }
   summaryOverlay.classList.remove("overlay--active");
   resultOverlay.classList.remove("overlay--active");
   resetGame(game.mode);
 });
 
 exitSquadButton.addEventListener("click", () => {
+  if (game.mode === "duel") {
+    returnToMainMenuAfterDuel("单挑结束，已返回主菜单。");
+    return;
+  }
   summaryOverlay.classList.remove("overlay--active");
   resultOverlay.classList.remove("overlay--active");
   startOverlay.classList.add("overlay--active");
   menuHome.classList.remove("is-hidden");
   skinScreen.classList.add("is-hidden");
   friendsScreen.classList.add("is-hidden");
+  shopScreen.classList.add("is-hidden");
+  eventsScreen.classList.add("is-hidden");
   document.body.classList.remove("duel-mode");
   setChatOpen(false);
   setMenuNote("你已退出当前队伍，返回主菜单。点击“排位赛”或“练习场”可重新开始。");
@@ -4876,6 +5799,10 @@ exitSquadButton.addEventListener("click", () => {
 });
 
 summaryContinueButton.addEventListener("click", () => {
+  if (game.mode === "duel") {
+    returnToMainMenuAfterDuel("单挑结束，已返回主菜单。");
+    return;
+  }
   summaryOverlay.classList.remove("overlay--active");
   resultOverlay.classList.add("overlay--active");
 });
