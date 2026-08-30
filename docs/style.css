@@ -547,6 +547,18 @@ body {
     linear-gradient(180deg, rgba(71, 139, 161, 0.96), rgba(31, 62, 91, 1));
 }
 
+.menu-card__icon--shop {
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255, 235, 147, 0.72), transparent 28%),
+    linear-gradient(180deg, rgba(145, 129, 69, 0.96), rgba(76, 58, 30, 1));
+}
+
+.menu-card__icon--events {
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255, 161, 161, 0.72), transparent 28%),
+    linear-gradient(180deg, rgba(158, 73, 94, 0.96), rgba(78, 34, 61, 1));
+}
+
 .menu-card--featured .menu-card__icon {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
@@ -567,13 +579,17 @@ body {
 .menu-home.is-hidden,
 .skin-screen.is-hidden,
 .friends-screen.is-hidden,
+.shop-screen.is-hidden,
+.events-screen.is-hidden,
 .friends-columns.is-hidden,
 .duel-screen.is-hidden {
   display: none;
 }
 
 .skin-screen,
-.friends-screen {
+.friends-screen,
+.shop-screen,
+.events-screen {
   display: grid;
   gap: 16px;
   min-height: 0;
@@ -670,6 +686,100 @@ body {
   margin-top: 8px;
   font-size: 14px;
   text-align: center;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.shop-card,
+.event-card {
+  border: 1px solid rgba(255, 242, 214, 0.12);
+  border-radius: 18px;
+  background: rgba(14, 13, 24, 0.32);
+  color: rgba(255, 248, 226, 0.9);
+}
+
+.shop-card {
+  min-height: 230px;
+  padding: 16px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.shop-card__tag,
+.event-card span {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(126, 224, 174, 0.16);
+  color: #8ff1bd;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.shop-card h3,
+.event-card h3 {
+  margin: 0;
+  color: #fff4cf;
+  font-size: 22px;
+}
+
+.shop-card p,
+.event-card p {
+  margin: 0;
+  color: rgba(245, 242, 232, 0.74);
+  line-height: 1.55;
+}
+
+.shop-card strong {
+  color: #ffe6a7;
+  font-size: 18px;
+}
+
+.shop-card button,
+.event-card button {
+  align-self: end;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 241, 213, 0.16);
+  border-radius: 10px;
+  background: rgba(186, 205, 216, 0.88);
+  color: #101820;
+  font: inherit;
+  font-weight: 800;
+}
+
+.shop-card button:disabled,
+.event-card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.events-list {
+  display: grid;
+  gap: 12px;
+}
+
+.event-card {
+  min-height: 112px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.event-card div {
+  display: grid;
+  gap: 8px;
+}
+
+.event-card--active {
+  border-color: rgba(126, 224, 174, 0.28);
+  background: linear-gradient(180deg, rgba(37, 62, 60, 0.42), rgba(14, 13, 24, 0.32));
 }
 
 .friends-columns {
@@ -1167,7 +1277,8 @@ body.touch-device .crosshair span:last-child {
   }
 
   .friends-columns,
-  .duel-screen {
+  .duel-screen,
+  .shop-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1301,6 +1412,15 @@ body.touch-device .crosshair span:last-child {
 
   .skin-tabs {
     flex-direction: column;
+  }
+
+  .event-card {
+    grid-template-columns: 1fr;
+  }
+
+  .event-card button,
+  .shop-card button {
+    width: 100%;
   }
 
   .chat-dock {
