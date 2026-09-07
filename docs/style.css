@@ -581,6 +581,7 @@ body {
 .friends-screen.is-hidden,
 .shop-screen.is-hidden,
 .events-screen.is-hidden,
+.weapon-select-screen.is-hidden,
 .friends-columns.is-hidden,
 .duel-screen.is-hidden {
   display: none;
@@ -589,7 +590,8 @@ body {
 .skin-screen,
 .friends-screen,
 .shop-screen,
-.events-screen {
+.events-screen,
+.weapon-select-screen {
   display: grid;
   gap: 16px;
   min-height: 0;
@@ -688,6 +690,95 @@ body {
   text-align: center;
 }
 
+.weapon-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.weapon-select-card {
+  display: grid;
+  gap: 10px;
+  min-height: 172px;
+  padding: 16px;
+  border: 1px solid rgba(255, 242, 214, 0.12);
+  border-radius: 18px;
+  background: rgba(14, 13, 24, 0.32);
+  color: #fff4cf;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.weapon-select-card:hover,
+.weapon-select-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(149, 196, 255, 0.48);
+  box-shadow: 0 14px 28px rgba(21, 13, 47, 0.28);
+  outline: none;
+}
+
+.weapon-select-card.is-active {
+  border-color: rgba(140, 210, 255, 0.78);
+  box-shadow: 0 0 0 2px rgba(140, 210, 255, 0.18);
+}
+
+.weapon-select-card__top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.weapon-select-card strong {
+  color: #fff7dd;
+  font-size: 22px;
+}
+
+.weapon-select-card span {
+  color: rgba(245, 242, 232, 0.68);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.weapon-select-card__mark {
+  min-width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 241, 213, 0.14);
+  border-radius: 50%;
+  color: rgba(255, 247, 223, 0.48);
+}
+
+.weapon-select-card.is-active .weapon-select-card__mark {
+  background: var(--accent);
+  border-color: transparent;
+  color: #061014;
+}
+
+.weapon-select-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.weapon-select-start {
+  min-width: 168px;
+  padding: 14px 22px;
+  border: 0;
+  background: var(--accent-strong);
+  color: #05120f;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.weapon-select-start:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -756,6 +847,18 @@ body {
 .event-card button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.event-card button.is-complete {
+  background: rgba(64, 190, 114, 0.96);
+  color: #ffffff;
+  border-color: rgba(190, 255, 211, 0.5);
+  box-shadow: 0 0 18px rgba(64, 190, 114, 0.28);
+}
+
+.event-card button.is-claimed {
+  background: rgba(94, 113, 124, 0.82);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .events-list {
@@ -929,6 +1032,7 @@ body.duel-mode .panel--status {
 
 .skin-tabs {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 12px;
   margin-top: 6px;
@@ -1412,6 +1516,10 @@ body.touch-device .crosshair span:last-child {
 
   .skin-tabs {
     flex-direction: column;
+  }
+
+  .weapon-select-grid {
+    grid-template-columns: 1fr;
   }
 
   .event-card {
