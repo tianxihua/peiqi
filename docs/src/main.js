@@ -15,6 +15,11 @@ const skinScreen = document.querySelector("#skin-screen");
 const friendsScreen = document.querySelector("#friends-screen");
 const shopScreen = document.querySelector("#shop-screen");
 const eventsScreen = document.querySelector("#events-screen");
+const weaponSelectScreen = document.querySelector("#weapon-select-screen");
+const weaponSelectGrid = document.querySelector("#weapon-select-grid");
+const weaponSelectBackButton = document.querySelector("#weapon-select-back-button");
+const weaponSelectStartButton = document.querySelector("#weapon-select-start-button");
+const weaponSelectSubtitle = document.querySelector("#weapon-select-subtitle");
 const skinBackButton = document.querySelector("#skin-back-button");
 const friendsBackButton = document.querySelector("#friends-back-button");
 const shopBackButton = document.querySelector("#shop-back-button");
@@ -28,6 +33,9 @@ const eventCards = Array.from(document.querySelectorAll(".event-card"));
 const skinGrid = document.querySelector("#skin-grid");
 const skinTabRifle = document.querySelector("#skin-tab-rifle");
 const skinTabPistol = document.querySelector("#skin-tab-pistol");
+const skinTabShotgun = document.querySelector("#skin-tab-shotgun");
+const skinTabSniper = document.querySelector("#skin-tab-sniper");
+const skinTabRocket = document.querySelector("#skin-tab-rocket");
 const skinTabBullet = document.querySelector("#skin-tab-bullet");
 const friendSearchInput = document.querySelector("#friend-search-input");
 const friendInviteButton = document.querySelector("#friend-invite-button");
@@ -136,23 +144,23 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEKLY_SHOP_ROTATIONS = [
   [
     { tag: "本周", title: "随机子弹皮肤", description: "本周外观补给，随机解锁一个还没拥有的子弹皮肤。", price: 520, action: "bullet" },
-    { tag: "补给", title: "战区金币包", description: "活动专属补给，本周暂未开放购买。", price: 300, action: "locked" },
-    { tag: "限时", title: "冰晶补给箱", description: "主打冷色系外观，本周展示中。", price: 760, action: "locked" },
+    { tag: "补给", title: "训练加速包", description: "购买后立刻增加 2 场本周活动完成进度。", price: 300, action: "matches", amount: 2 },
+    { tag: "限时", title: "冰晶战绩卡", description: "购买后立刻增加 1 场胜场，用来解锁段位和武器皮肤。", price: 760, action: "wins", amount: 1 },
   ],
   [
     { tag: "本周", title: "随机子弹皮肤", description: "轮换外观补给，优先抽取你还缺少的弹道图案。", price: 600, action: "bullet" },
-    { tag: "推荐", title: "突入作战包", description: "训练场主题补给，本周暂未开放购买。", price: 420, action: "locked" },
-    { tag: "限时", title: "闪电弹药箱", description: "本周主题为高亮电弧和快速突击。", price: 820, action: "locked" },
+    { tag: "推荐", title: "突入作战包", description: "购买后立刻增加 2400 点本周活动伤害进度。", price: 420, action: "damage", amount: 2400 },
+    { tag: "限时", title: "闪电战绩卡", description: "购买后立刻增加 1 场胜场，用来解锁段位和武器皮肤。", price: 820, action: "wins", amount: 1 },
   ],
   [
     { tag: "本周", title: "随机子弹皮肤", description: "本周折扣补给，随机获得一个未解锁的玩家子弹皮肤。", price: 480, action: "bullet" },
-    { tag: "外观", title: "靶心涂装箱", description: "精准射击主题外观，本周展示中。", price: 680, action: "locked" },
-    { tag: "活动", title: "双人切磋票", description: "好友玩法主题道具，本周暂未开放购买。", price: 360, action: "locked" },
+    { tag: "外观", title: "靶心火力包", description: "购买后立刻增加 1800 点本周活动伤害进度。", price: 680, action: "damage", amount: 1800 },
+    { tag: "活动", title: "双人切磋票", description: "购买后立刻增加 1 次本周好友切磋活动进度。", price: 360, action: "duels", amount: 1 },
   ],
   [
     { tag: "本周", title: "随机子弹皮肤", description: "本周精选补给，可能抽到爱心、紫能、金币等子弹皮肤。", price: 650, action: "bullet" },
-    { tag: "推荐", title: "烟花弹药箱", description: "庆典主题外观，本周展示中。", price: 780, action: "locked" },
-    { tag: "限时", title: "排位荣誉包", description: "排位主题补给，本周暂未开放购买。", price: 900, action: "locked" },
+    { tag: "推荐", title: "烟花训练包", description: "购买后立刻增加 3 场本周活动完成进度。", price: 780, action: "matches", amount: 3 },
+    { tag: "限时", title: "排位荣誉卡", description: "购买后立刻增加 2 场胜场，用来解锁段位和武器皮肤。", price: 900, action: "wins", amount: 2 },
   ],
 ];
 const WEEKLY_EVENT_POOL = [
@@ -272,6 +280,30 @@ function createRifleSkin(index, row, col, name, theme) {
   };
 }
 
+const GENERATED_WEAPON_SKIN_NAMES = {
+  shotgun: "散弹枪",
+  sniper: "狙击枪",
+  rocket: "导弹枪",
+};
+
+const GENERATED_WEAPON_SKIN_THEMES = [
+  { body: "#4f675f", slide: "#8aa190", grip: "#2f403c", accent: "#8be0b2", glow: "#82ffd0" },
+  { body: "#53657e", slide: "#b7c8df", grip: "#243246", accent: "#68c8ff", glow: "#7bdcff" },
+  { body: "#7b5147", slide: "#c18b69", grip: "#412f34", accent: "#ffb15c", glow: "#ffc078" },
+  { body: "#514b72", slide: "#8974d6", grip: "#29263f", accent: "#d88cff", glow: "#e0a0ff" },
+  { body: "#30343b", slide: "#707b86", grip: "#171c22", accent: "#f3d46b", glow: "#ffe07d" },
+  { body: "#6b7d4a", slide: "#a7bb77", grip: "#3d4a31", accent: "#c6ff75", glow: "#d7ff91" },
+];
+
+function createGeneratedWeaponSkin(category, index, theme) {
+  return {
+    id: `${category}-${index + 1}`,
+    name: `${GENERATED_WEAPON_SKIN_NAMES[category]}皮肤 ${index + 1}`,
+    category,
+    theme,
+  };
+}
+
 const WEAPON_SKINS = {
   pistol: [
     createPistolSkin(0, 0, 0, { body: "#a8b2bc", slide: "#d5d9de", grip: "#5f4437", accent: "#52a7ff", glow: "#5cb8ff" }),
@@ -298,6 +330,9 @@ const WEAPON_SKINS = {
     createRifleSkin(4, 3, 0, "突击步枪皮肤 5", { body: "#4b4038", slide: "#7a6758", grip: "#2c2a2b", accent: "#6d716f", glow: "#000000" }),
     createRifleSkin(5, 3, 1, "突击步枪皮肤 6", { body: "#6e7d58", slide: "#9aae79", grip: "#49563f", accent: "#98b56f", glow: "#000000" }),
   ],
+  shotgun: GENERATED_WEAPON_SKIN_THEMES.map((theme, index) => createGeneratedWeaponSkin("shotgun", index, theme)),
+  sniper: GENERATED_WEAPON_SKIN_THEMES.map((theme, index) => createGeneratedWeaponSkin("sniper", index, theme)),
+  rocket: GENERATED_WEAPON_SKIN_THEMES.map((theme, index) => createGeneratedWeaponSkin("rocket", index, theme)),
 };
 
 const WEAPONS = {
@@ -392,6 +427,10 @@ const WEAPONS = {
 
 const WEAPON_POOL = Object.keys(WEAPONS);
 
+function getWeaponDisplayName(weaponKey) {
+  return WEAPONS[weaponKey]?.name ?? GENERATED_WEAPON_SKIN_NAMES[weaponKey] ?? weaponKey;
+}
+
 const TEAMS = {
   blue: {
     key: "blue",
@@ -447,6 +486,8 @@ let squadCommand = null;
 let chatAnnounceCooldown = 0;
 let activeSkinCategory = "rifle";
 let skinRenderToken = 0;
+let pendingGameMode = "ranked";
+let selectedLoadout = ["rifle", "pistol"];
 let friendSyncTimer = null;
 let friendSyncBusy = false;
 let acceptedDuelFriend = "";
@@ -601,9 +642,12 @@ function normalizeAccountRecord(account) {
       ? {
         rifle: account.selectedSkins.rifle ?? "rifle-1",
         pistol: account.selectedSkins.pistol ?? "pistol-1",
+        shotgun: account.selectedSkins.shotgun ?? "shotgun-1",
+        sniper: account.selectedSkins.sniper ?? "sniper-1",
+        rocket: account.selectedSkins.rocket ?? "rocket-1",
         bullet: account.selectedSkins.bullet ?? "bullet-default",
       }
-      : { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" },
+      : { rifle: "rifle-1", pistol: "pistol-1", shotgun: "shotgun-1", sniper: "sniper-1", rocket: "rocket-1", bullet: "bullet-default" },
     unlockedBulletSkins: Array.isArray(account.unlockedBulletSkins)
       ? Array.from(new Set(["bullet-default", ...account.unlockedBulletSkins]))
       : ["bullet-default"],
@@ -634,7 +678,7 @@ async function saveOnlineAccount(name, account) {
     passwordHash: account.passwordHash,
     wins: Math.max(0, Number(account.wins) || 0),
     coins: Math.max(0, Number(account.coins) || 0),
-    selectedSkins: account.selectedSkins ?? { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" },
+    selectedSkins: account.selectedSkins ?? { rifle: "rifle-1", pistol: "pistol-1", shotgun: "shotgun-1", sniper: "sniper-1", rocket: "rocket-1", bullet: "bullet-default" },
     unlockedBulletSkins: Array.isArray(account.unlockedBulletSkins) ? account.unlockedBulletSkins : ["bullet-default"],
     eventStats: account.eventStats ?? { matchesPlayed: 0, damageDealt: 0, duelsPlayed: 0 },
     eventWeek: Number(account.eventWeek) || getWeeklyIndex(),
@@ -699,10 +743,13 @@ function getAccountRecord(name) {
 
 function ensureAccountCosmetics(account) {
   if (!account.selectedSkins || typeof account.selectedSkins !== "object") {
-    account.selectedSkins = { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" };
+    account.selectedSkins = { rifle: "rifle-1", pistol: "pistol-1", shotgun: "shotgun-1", sniper: "sniper-1", rocket: "rocket-1", bullet: "bullet-default" };
   }
   account.selectedSkins.rifle ??= "rifle-1";
   account.selectedSkins.pistol ??= "pistol-1";
+  account.selectedSkins.shotgun ??= "shotgun-1";
+  account.selectedSkins.sniper ??= "sniper-1";
+  account.selectedSkins.rocket ??= "rocket-1";
   account.selectedSkins.bullet ??= "bullet-default";
   account.coins = Math.max(0, Number(account.coins) || 0);
   account.unlockedBulletSkins = Array.isArray(account.unlockedBulletSkins)
@@ -1854,11 +1901,116 @@ function handleStartedDuelInvite() {
   startAcceptedDuel(acceptedDuelFriend, false);
 }
 
+function normalizeSelectedLoadout() {
+  selectedLoadout = Array.from(new Set(selectedLoadout.filter((weaponKey) => WEAPONS[weaponKey]))).slice(0, 2);
+}
+
+function ensureDefaultLoadout() {
+  normalizeSelectedLoadout();
+  for (const weaponKey of ["rifle", "pistol"]) {
+    if (selectedLoadout.length >= 2) {
+      break;
+    }
+    if (!selectedLoadout.includes(weaponKey)) {
+      selectedLoadout.push(weaponKey);
+    }
+  }
+}
+
+function renderWeaponSelect() {
+  if (!weaponSelectGrid || !weaponSelectStartButton) {
+    return;
+  }
+  normalizeSelectedLoadout();
+  weaponSelectGrid.innerHTML = "";
+  for (const weaponKey of WEAPON_POOL) {
+    const weapon = WEAPONS[weaponKey];
+    const isSelected = selectedLoadout.includes(weaponKey);
+    const order = selectedLoadout.indexOf(weaponKey) + 1;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "weapon-select-card";
+    if (isSelected) {
+      card.classList.add("is-active");
+    }
+
+    const top = document.createElement("div");
+    top.className = "weapon-select-card__top";
+    const title = document.createElement("strong");
+    title.textContent = weapon.name;
+    const mark = document.createElement("div");
+    mark.className = "weapon-select-card__mark";
+    mark.textContent = isSelected ? order : "+";
+    top.append(title, mark);
+
+    const detail = document.createElement("span");
+    detail.textContent = `${weapon.magSize} 发弹匣 / 备用 ${weapon.reserveAmmo} / 换弹 ${weapon.reloadTime.toFixed(2)} 秒`;
+    const skin = document.createElement("span");
+    skin.textContent = `当前皮肤：${getSelectedWeaponSkin(weaponKey)?.name ?? "默认外观"}`;
+    card.append(top, detail, skin);
+    card.addEventListener("click", () => {
+      if (isSelected) {
+        selectedLoadout = selectedLoadout.filter((key) => key !== weaponKey);
+      } else {
+        if (selectedLoadout.length >= 2) {
+          selectedLoadout.shift();
+        }
+        selectedLoadout.push(weaponKey);
+      }
+      normalizeSelectedLoadout();
+      renderWeaponSelect();
+      setMenuNote(`开局武器：${selectedLoadout.map(getWeaponDisplayName).join(" + ")}。`);
+    });
+    weaponSelectGrid.appendChild(card);
+  }
+  weaponSelectStartButton.disabled = selectedLoadout.length !== 2;
+  if (weaponSelectSubtitle) {
+    weaponSelectSubtitle.textContent = `已选择：${selectedLoadout.map(getWeaponDisplayName).join(" + ")}。每局开始前都可以重新换。`;
+  }
+}
+
+function openWeaponSelect(mode = "ranked") {
+  pendingGameMode = mode;
+  ensureDefaultLoadout();
+  menuHome.classList.add("is-hidden");
+  skinScreen.classList.add("is-hidden");
+  friendsScreen.classList.add("is-hidden");
+  shopScreen.classList.add("is-hidden");
+  eventsScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.remove("is-hidden");
+  renderWeaponSelect();
+  setMenuNote("选择两把开局武器，选好后点击“开始战斗”。");
+}
+
+function closeWeaponSelect() {
+  weaponSelectScreen.classList.add("is-hidden");
+  menuHome.classList.remove("is-hidden");
+  const note = pendingGameMode === "duel" ? "已取消开局选枪，单挑房间仍可重新开始。" : "已返回主菜单。点击“排位赛”开始正式匹配。";
+  setMenuNote(note);
+}
+
+function startSelectedGame() {
+  normalizeSelectedLoadout();
+  if (selectedLoadout.length !== 2) {
+    setMenuNote("请先选择两把开局武器。");
+    return;
+  }
+  startOverlay.classList.remove("overlay--active");
+  weaponSelectScreen.classList.add("is-hidden");
+  setMenuNote(`${pendingGameMode === "duel" ? "单挑" : pendingGameMode === "practice" ? "练习场" : "排位赛"}正在部署中。`);
+  resetGame(pendingGameMode);
+  if (pendingGameMode === "duel") {
+    duelStartedAt = Date.now();
+    connectPhotonDuel();
+  }
+}
+
 function openFriendsScreen() {
   menuHome.classList.add("is-hidden");
   skinScreen.classList.add("is-hidden");
   shopScreen.classList.add("is-hidden");
   eventsScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   friendsScreen.classList.remove("is-hidden");
   friendsColumns.classList.remove("is-hidden");
   duelScreen.classList.add("is-hidden");
@@ -1870,6 +2022,7 @@ function closeFriendsScreen() {
   friendsScreen.classList.add("is-hidden");
   friendsColumns.classList.remove("is-hidden");
   duelScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   menuHome.classList.remove("is-hidden");
   setMenuNote("已返回主菜单。点击“排位赛”开始正式匹配。");
 }
@@ -1879,6 +2032,7 @@ function openShopScreen() {
   skinScreen.classList.add("is-hidden");
   friendsScreen.classList.add("is-hidden");
   eventsScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   shopScreen.classList.remove("is-hidden");
   renderShop();
   setMenuNote(`商城已打开。当前金币：${getCurrentCoins()}。`);
@@ -1886,6 +2040,7 @@ function openShopScreen() {
 
 function closeShopScreen() {
   shopScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   menuHome.classList.remove("is-hidden");
   setMenuNote("已返回主菜单。点击“商城”可查看补给和外观商品。");
 }
@@ -1895,6 +2050,7 @@ function openEventsScreen() {
   skinScreen.classList.add("is-hidden");
   friendsScreen.classList.add("is-hidden");
   shopScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   eventsScreen.classList.remove("is-hidden");
   renderEvents();
   setMenuNote(`活动已打开。完成目标后可领取金币，当前金币：${getCurrentCoins()}。`);
@@ -1902,6 +2058,7 @@ function openEventsScreen() {
 
 function closeEventsScreen() {
   eventsScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   menuHome.classList.remove("is-hidden");
   setMenuNote("已返回主菜单。点击“活动”可查看当前任务。");
 }
@@ -1950,7 +2107,6 @@ async function startDuelGame() {
 }
 
 function startAcceptedDuel(opponentName, isHost) {
-  acceptedDuelFriend = "";
   duelLobbyRole = "";
   duelReady = false;
   game.duelOpponent = opponentName;
@@ -1960,10 +2116,9 @@ function startAcceptedDuel(opponentName, isHost) {
       consumeDuelInvite(opponentName).catch(() => {});
     }, FRIEND_SYNC_INTERVAL * 3);
   }
-  startOverlay.classList.remove("overlay--active");
-  resetGame("duel");
-  duelStartedAt = Date.now();
-  connectPhotonDuel();
+  openWeaponSelect("duel");
+  acceptedDuelFriend = "";
+  setMenuNote(`与 ${opponentName} 的单挑已就绪，先选择两把开局武器。`);
 }
 
 function returnToMainMenuAfterDuel(message) {
@@ -1993,6 +2148,7 @@ function returnToMainMenuAfterDuel(message) {
   friendsScreen.classList.add("is-hidden");
   shopScreen.classList.add("is-hidden");
   eventsScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   friendsColumns.classList.remove("is-hidden");
   duelScreen.classList.add("is-hidden");
   setMenuNote(message || "单挑结束，已返回主菜单。");
@@ -2072,19 +2228,16 @@ function renderShop() {
     card.querySelector("strong").textContent = `${item.price} 金币`;
     const button = card.querySelector("button");
     button.dataset.shopAction = item.action;
-    button.disabled = item.action !== "bullet"
-      || !account
-      || remaining.length === 0
-      || account.coins < item.price;
-    button.textContent = item.action !== "bullet"
-      ? "即将开放"
-      : !account
-        ? "请先登录"
-        : remaining.length === 0
-          ? "已拥有全部"
-          : account.coins < item.price
-            ? `金币不足（${account.coins}/${item.price}）`
-            : "购买";
+    button.dataset.shopIndex = String(index);
+    const soldOut = item.action === "bullet" && remaining.length === 0;
+    button.disabled = !account || soldOut || account.coins < item.price;
+    button.textContent = !account
+      ? "请先登录"
+      : soldOut
+        ? "已拥有全部"
+        : account.coins < item.price
+          ? `金币不足（${account.coins}/${item.price}）`
+          : "购买";
   }
 }
 
@@ -2106,6 +2259,8 @@ function renderEvents() {
     const current = Math.min(eventDef.target, eventDef.progress(account.eventStats));
     const completed = current >= eventDef.target;
     const claimed = Boolean(account.claimedEvents[getWeeklyEventClaimKey(eventDef.id)]);
+    button.classList.toggle("is-complete", completed && !claimed);
+    button.classList.toggle("is-claimed", claimed);
     button.disabled = !completed || claimed;
     button.textContent = claimed
       ? "已领取"
@@ -2146,6 +2301,51 @@ async function buyRandomBulletSkin() {
   }
   renderShop();
   renderEvents();
+}
+
+async function buyWeeklyShopItem(index) {
+  const item = getWeeklyShopItems()[Number(index)];
+  if (!item) {
+    return;
+  }
+  if (item.action === "bullet") {
+    await buyRandomBulletSkin();
+    return;
+  }
+  if (!currentAccount || !accounts[currentAccount]) {
+    setMenuNote("请先登录账号。");
+    return;
+  }
+  const account = ensureAccountCosmetics(accounts[currentAccount]);
+  if (account.coins < item.price) {
+    setMenuNote(`金币不足。当前 ${account.coins} 金币，需要 ${item.price} 金币。`);
+    renderShop();
+    return;
+  }
+  account.coins -= item.price;
+  if (item.action === "wins") {
+    progression.wins += item.amount;
+    account.wins = progression.wins;
+    syncBulletSkinsForWins(account, progression.wins);
+  }
+  if (item.action === "matches") {
+    account.eventStats.matchesPlayed += item.amount;
+  }
+  if (item.action === "damage") {
+    account.eventStats.damageDealt += item.amount;
+  }
+  if (item.action === "duels") {
+    account.eventStats.duelsPlayed += item.amount;
+  }
+  try {
+    await saveCurrentAccount();
+    setMenuNote(`购买成功：${item.title}。当前剩余 ${account.coins} 金币。`);
+  } catch {
+    setMenuNote(`已在本机购买 ${item.title}，但联网同步失败。`);
+  }
+  renderShop();
+  renderEvents();
+  updateHud();
 }
 
 async function claimEventReward(eventId) {
@@ -2258,7 +2458,7 @@ async function handleRegister() {
       passwordHash: await hashPassword(name, password),
       wins: 0,
       coins: 0,
-      selectedSkins: { rifle: "rifle-1", pistol: "pistol-1", bullet: "bullet-default" },
+      selectedSkins: { rifle: "rifle-1", pistol: "pistol-1", shotgun: "shotgun-1", sniper: "sniper-1", rocket: "rocket-1", bullet: "bullet-default" },
       unlockedBulletSkins: ["bullet-default"],
       eventStats: { matchesPlayed: 0, damageDealt: 0, duelsPlayed: 0 },
       eventWeek: getWeeklyIndex(),
@@ -2291,6 +2491,9 @@ function getUnlockedSkinCount(category) {
     const account = ensureAccountCosmetics(accounts[currentAccount]);
     return BULLET_SKINS.filter((skin) => account.unlockedBulletSkins.includes(skin.id)).length;
   }
+  if (!WEAPON_SKINS[category]) {
+    return 0;
+  }
   return Math.max(1, Math.min(WEAPON_SKINS[category].length, progression.wins + 1));
 }
 
@@ -2302,7 +2505,7 @@ function getUnlockedSkins(category) {
     const account = ensureAccountCosmetics(accounts[currentAccount]);
     return BULLET_SKINS.filter((skin) => account.unlockedBulletSkins.includes(skin.id));
   }
-  return WEAPON_SKINS[category].slice(0, getUnlockedSkinCount(category));
+  return WEAPON_SKINS[category]?.slice(0, getUnlockedSkinCount(category)) ?? [];
 }
 
 function getSelectedSkinId(category) {
@@ -2314,10 +2517,10 @@ function getSelectedSkinId(category) {
     return accounts[currentAccount].selectedSkins.bullet ?? "bullet-default";
   }
   if (!currentAccount || !accounts[currentAccount]) {
-    return WEAPON_SKINS[category][0]?.id ?? null;
+    return WEAPON_SKINS[category]?.[0]?.id ?? null;
   }
   ensureAccountCosmetics(accounts[currentAccount]);
-  return accounts[currentAccount].selectedSkins[category] ?? WEAPON_SKINS[category][0]?.id ?? null;
+  return accounts[currentAccount].selectedSkins[category] ?? WEAPON_SKINS[category]?.[0]?.id ?? null;
 }
 
 function getSelectedSkin(category) {
@@ -2325,25 +2528,25 @@ function getSelectedSkin(category) {
   if (category === "bullet") {
     return BULLET_SKINS.find((skin) => skin.id === selectedId) ?? BULLET_SKINS[0];
   }
-  return WEAPON_SKINS[category].find((skin) => skin.id === selectedId) ?? WEAPON_SKINS[category][0] ?? null;
+  return WEAPON_SKINS[category]?.find((skin) => skin.id === selectedId) ?? WEAPON_SKINS[category]?.[0] ?? null;
 }
 
 function getWeaponSkinTheme(weaponKey) {
-  if (weaponKey !== "rifle" && weaponKey !== "pistol") {
+  if (!WEAPON_SKINS[weaponKey]) {
     return null;
   }
   return getSelectedSkin(weaponKey)?.theme ?? null;
 }
 
 function getSelectedWeaponSkin(weaponKey) {
-  if (weaponKey !== "rifle" && weaponKey !== "pistol") {
+  if (!WEAPON_SKINS[weaponKey]) {
     return null;
   }
   return getSelectedSkin(weaponKey);
 }
 
 function getWeaponSkin(weaponKey) {
-  if (weaponKey !== "rifle" && weaponKey !== "pistol") {
+  if (!WEAPON_SKINS[weaponKey]) {
     return null;
   }
   return getSelectedSkin(weaponKey);
@@ -2390,11 +2593,18 @@ async function getSkinThumbDataUrl(skin) {
   const gripColor = theme.grip ?? "#33414d";
   const accentColor = theme.accent ?? "#7cc8ff";
   const glowColor = theme.glow && theme.glow !== "#000000" ? theme.glow : null;
-  const isRifle = skin.category === "rifle";
-  const gunW = isRifle ? 250 : 170;
-  const gunH = isRifle ? 70 : 62;
+  const previewProfiles = {
+    pistol: { width: 170, height: 62, y: 90, rotation: -0.08 },
+    rifle: { width: 250, height: 70, y: 86, rotation: -0.05 },
+    shotgun: { width: 260, height: 78, y: 84, rotation: -0.06 },
+    sniper: { width: 288, height: 62, y: 90, rotation: -0.04 },
+    rocket: { width: 246, height: 88, y: 80, rotation: -0.03 },
+  };
+  const profile = previewProfiles[skin.category] ?? previewProfiles.rifle;
+  const gunW = profile.width;
+  const gunH = profile.height;
   const gunX = (targetWidth - gunW) / 2;
-  const gunY = isRifle ? 86 : 90;
+  const gunY = profile.y;
 
   outCtx.save();
   outCtx.fillStyle = "rgba(255, 255, 255, 0.035)";
@@ -2405,7 +2615,7 @@ async function getSkinThumbDataUrl(skin) {
   }
 
   outCtx.translate(gunX, gunY);
-  outCtx.rotate(isRifle ? -0.05 : -0.08);
+  outCtx.rotate(profile.rotation);
 
   outCtx.fillStyle = bodyColor;
   outCtx.fillRect(0, 0, gunW, gunH * 0.34);
@@ -2419,7 +2629,7 @@ async function getSkinThumbDataUrl(skin) {
   outCtx.fillStyle = accentColor;
   outCtx.fillRect(gunW * 0.08, gunH * 0.06, gunW * 0.18, gunH * 0.1);
 
-  if (isRifle) {
+  if (skin.category === "rifle") {
     outCtx.fillStyle = slideColor;
     outCtx.fillRect(gunW * 0.76, gunH * 0.08, gunW * 0.18, gunH * 0.08);
     outCtx.fillStyle = gripColor;
@@ -2427,6 +2637,29 @@ async function getSkinThumbDataUrl(skin) {
     outCtx.fillRect(gunW * 0.04, gunH * 0.08, gunW * 0.12, gunH * 0.18);
     outCtx.fillStyle = accentColor;
     outCtx.fillRect(gunW * 0.48, -gunH * 0.12, gunW * 0.18, gunH * 0.1);
+  } else if (skin.category === "shotgun") {
+    outCtx.fillStyle = slideColor;
+    outCtx.fillRect(gunW * 0.72, gunH * 0.1, gunW * 0.24, gunH * 0.08);
+    outCtx.fillStyle = gripColor;
+    outCtx.fillRect(gunW * 0.42, gunH * 0.22, gunW * 0.26, gunH * 0.16);
+    outCtx.fillRect(gunW * 0.03, gunH * 0.04, gunW * 0.16, gunH * 0.18);
+    outCtx.fillStyle = accentColor;
+    outCtx.fillRect(gunW * 0.78, -gunH * 0.08, gunW * 0.12, gunH * 0.08);
+  } else if (skin.category === "sniper") {
+    outCtx.fillStyle = slideColor;
+    outCtx.fillRect(gunW * 0.72, gunH * 0.08, gunW * 0.3, gunH * 0.06);
+    outCtx.fillStyle = gripColor;
+    outCtx.fillRect(gunW * 0.48, gunH * 0.22, gunW * 0.12, gunH * 0.58);
+    outCtx.fillStyle = accentColor;
+    outCtx.fillRect(gunW * 0.34, -gunH * 0.18, gunW * 0.24, gunH * 0.12);
+    outCtx.fillRect(gunW * 0.38, -gunH * 0.26, gunW * 0.16, gunH * 0.08);
+  } else if (skin.category === "rocket") {
+    outCtx.fillStyle = slideColor;
+    outCtx.fillRect(gunW * 0.72, -gunH * 0.04, gunW * 0.18, gunH * 0.42);
+    outCtx.fillStyle = gripColor;
+    outCtx.fillRect(gunW * 0.36, gunH * 0.28, gunW * 0.16, gunH * 0.34);
+    outCtx.fillStyle = accentColor;
+    outCtx.fillRect(gunW * 0.06, -gunH * 0.06, gunW * 0.12, gunH * 0.46);
   } else {
     outCtx.fillStyle = slideColor;
     outCtx.fillRect(gunW * 0.7, gunH * 0.08, gunW * 0.12, gunH * 0.08);
@@ -2699,6 +2932,9 @@ async function renderSkinSelection() {
   const renderToken = ++skinRenderToken;
   skinTabRifle.classList.toggle("is-active", category === "rifle");
   skinTabPistol.classList.toggle("is-active", category === "pistol");
+  skinTabShotgun.classList.toggle("is-active", category === "shotgun");
+  skinTabSniper.classList.toggle("is-active", category === "sniper");
+  skinTabRocket.classList.toggle("is-active", category === "rocket");
   skinTabBullet.classList.toggle("is-active", category === "bullet");
   skinGrid.innerHTML = "";
 
@@ -2750,7 +2986,7 @@ async function renderSkinSelection() {
         });
       }
       renderSkinSelection();
-      const categoryName = category === "rifle" ? "突击步枪" : category === "pistol" ? "小手枪" : "子弹";
+      const categoryName = category === "bullet" ? "子弹" : getWeaponDisplayName(category);
       setMenuNote(`已选择${categoryName}皮肤：${skin.name}。`);
     });
     skinGrid.appendChild(card);
@@ -2763,9 +2999,10 @@ function openSkinSelection(category = "rifle") {
   friendsScreen.classList.add("is-hidden");
   shopScreen.classList.add("is-hidden");
   eventsScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   skinScreen.classList.remove("is-hidden");
   renderSkinSelection();
-  const categoryName = category === "rifle" ? "突击步枪" : category === "pistol" ? "小手枪" : "子弹";
+  const categoryName = category === "bullet" ? "子弹" : getWeaponDisplayName(category);
   const suffix = category === "bullet" ? "。子弹皮肤可在商城用金币购买。" : "。每赢一局会再解锁一把。";
   setMenuNote(`当前已解锁 ${getUnlockedSkinCount(category)} 个${categoryName}皮肤${suffix}`);
 }
@@ -2775,6 +3012,7 @@ function closeSkinSelection() {
   friendsScreen.classList.add("is-hidden");
   shopScreen.classList.add("is-hidden");
   eventsScreen.classList.add("is-hidden");
+  weaponSelectScreen.classList.add("is-hidden");
   menuHome.classList.remove("is-hidden");
   setMenuNote("已返回主菜单。点击“排位赛”开始正式匹配。");
 }
@@ -4425,7 +4663,7 @@ function resetGame(mode = "ranked") {
   player.fov = Math.PI / 3;
   player.reloadTimer = 0;
   player.fireCooldown = 0;
-  initializeWeaponInventory(player, "rifle", "pistol");
+  initializeWeaponInventory(player, selectedLoadout[0] ?? "rifle", selectedLoadout[1] ?? "pistol");
   resetParticipantTracking();
 
   const difficultyProfile = getDifficultyProfileByWins(progression.wins);
@@ -5283,6 +5521,24 @@ function renderWeapon() {
     ctx.fillStyle = accentColor;
     ctx.fillRect(gunW * 0.12, -gunH * 0.36, gunW * 0.12, gunH * 0.1);
   }
+  if (skinTheme && weapon.key === "shotgun") {
+    ctx.fillStyle = slideColor;
+    ctx.fillRect(-gunW * 0.44, gunH * 0.08, gunW * 0.34, gunH * 0.1);
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(gunW * 0.34, -gunH * 0.2, gunW * 0.2, gunH * 0.08);
+  }
+  if (skinTheme && weapon.key === "sniper") {
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(-gunW * 0.2, -gunH * 0.46, gunW * 0.4, gunH * 0.08);
+    ctx.fillStyle = slideColor;
+    ctx.fillRect(gunW * 0.44, -gunH * 0.08, gunW * 0.34, gunH * 0.06);
+  }
+  if (skinTheme && weapon.key === "rocket") {
+    ctx.fillStyle = slideColor;
+    ctx.fillRect(gunW * 0.36, -gunH * 0.36, gunW * 0.16, gunH * 0.72);
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(-gunW * 0.44, -gunH * 0.36, gunW * 0.12, gunH * 0.72);
+  }
 
   if (player.muzzleFlash > 0) {
     ctx.fillStyle = `rgba(255, 208, 120, ${player.muzzleFlash * 0.75})`;
@@ -5685,15 +5941,11 @@ window.addEventListener("blur", () => {
 window.addEventListener("resize", resize);
 
 rankedButton.addEventListener("click", () => {
-  startOverlay.classList.remove("overlay--active");
-  setMenuNote("排位赛正在部署中。");
-  resetGame("ranked");
+  openWeaponSelect("ranked");
 });
 
 practiceButton.addEventListener("click", () => {
-  startOverlay.classList.remove("overlay--active");
-  setMenuNote("练习场正在部署中。");
-  resetGame("practice");
+  openWeaponSelect("practice");
 });
 
 skinButton.addEventListener("click", () => {
@@ -5728,6 +5980,14 @@ eventsBackButton.addEventListener("click", () => {
   closeEventsScreen();
 });
 
+weaponSelectBackButton.addEventListener("click", () => {
+  closeWeaponSelect();
+});
+
+weaponSelectStartButton.addEventListener("click", () => {
+  startSelectedGame();
+});
+
 friendInviteButton.addEventListener("click", sendFriendInvite);
 friendSearchInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -5749,6 +6009,24 @@ skinTabPistol.addEventListener("click", () => {
   setMenuNote(`当前已解锁 ${getUnlockedSkinCount("pistol")} 把小手枪皮肤。`);
 });
 
+skinTabShotgun.addEventListener("click", () => {
+  activeSkinCategory = "shotgun";
+  renderSkinSelection();
+  setMenuNote(`当前已解锁 ${getUnlockedSkinCount("shotgun")} 把散弹枪皮肤。`);
+});
+
+skinTabSniper.addEventListener("click", () => {
+  activeSkinCategory = "sniper";
+  renderSkinSelection();
+  setMenuNote(`当前已解锁 ${getUnlockedSkinCount("sniper")} 把狙击枪皮肤。`);
+});
+
+skinTabRocket.addEventListener("click", () => {
+  activeSkinCategory = "rocket";
+  renderSkinSelection();
+  setMenuNote(`当前已解锁 ${getUnlockedSkinCount("rocket")} 把导弹枪皮肤。`);
+});
+
 skinTabBullet.addEventListener("click", () => {
   activeSkinCategory = "bullet";
   renderSkinSelection();
@@ -5759,9 +6037,7 @@ for (const card of shopCards) {
   const button = card.querySelector("button");
   if (button) {
     button.addEventListener("click", () => {
-      if (button.dataset.shopAction === "bullet") {
-        buyRandomBulletSkin();
-      }
+      buyWeeklyShopItem(button.dataset.shopIndex);
     });
   }
 }
