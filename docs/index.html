@@ -125,7 +125,8 @@
           <p class="account-message" id="login-message">输入名称和密码后登录，或先注册一个新账号。</p>
         </div>
       </div>
-            <div class="overlay overlay--menu" id="start-overlay">
+
+      <div class="overlay overlay--menu" id="start-overlay">
         <div class="menu-screen">
           <div class="menu-home" id="menu-home">
             <div class="menu-screen__header">
@@ -161,6 +162,21 @@
             </div>
           </div>
 
+          <div class="weapon-select-screen is-hidden" id="weapon-select-screen">
+            <div class="skin-screen__top">
+              <button class="skin-back" id="weapon-select-back-button" type="button">返回</button>
+              <div>
+                <span class="menu-screen__eyebrow">LOADOUT</span>
+                <h2>选择开局武器</h2>
+                <p id="weapon-select-subtitle">每局开始前选择两把枪。地图里的武器掉落仍然可以继续拾取。</p>
+              </div>
+            </div>
+            <div class="weapon-select-grid" id="weapon-select-grid"></div>
+            <div class="weapon-select-actions">
+              <button class="weapon-select-start" id="weapon-select-start-button" type="button">开始战斗</button>
+            </div>
+          </div>
+
           <div class="shop-screen is-hidden" id="shop-screen">
             <div class="skin-screen__top">
               <button class="skin-back" id="shop-back-button" type="button">返回</button>
@@ -173,10 +189,10 @@
             <div class="shop-grid">
               <section class="shop-card">
                 <span class="shop-card__tag">推荐</span>
-                <h3>新兵补给箱</h3>
-                <p>包含随机武器皮肤和战区补给券。</p>
+                <h3>训练加速包</h3>
+                <p>购买后立刻增加本周活动完成进度。</p>
                 <strong>300 金币</strong>
-                <button type="button">即将开放</button>
+                <button type="button">购买</button>
               </section>
               <section class="shop-card">
                 <span class="shop-card__tag">外观</span>
@@ -187,10 +203,10 @@
               </section>
               <section class="shop-card">
                 <span class="shop-card__tag">限时</span>
-                <h3>排位加成卡</h3>
-                <p>获胜时额外获得一次胜场加成。</p>
+                <h3>排位荣誉卡</h3>
+                <p>购买后立刻增加胜场，用来解锁段位和武器皮肤。</p>
                 <strong>900 金币</strong>
-                <button type="button">即将开放</button>
+                <button type="button">购买</button>
               </section>
             </div>
           </div>
@@ -287,6 +303,9 @@
             <div class="skin-tabs">
               <button class="skin-tab is-active" id="skin-tab-rifle" type="button">突击步枪</button>
               <button class="skin-tab" id="skin-tab-pistol" type="button">小手枪</button>
+              <button class="skin-tab" id="skin-tab-shotgun" type="button">散弹枪</button>
+              <button class="skin-tab" id="skin-tab-sniper" type="button">狙击枪</button>
+              <button class="skin-tab" id="skin-tab-rocket" type="button">导弹枪</button>
               <button class="skin-tab" id="skin-tab-bullet" type="button">子弹皮肤</button>
             </div>
             <div class="skin-grid" id="skin-grid"></div>
